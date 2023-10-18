@@ -30,7 +30,7 @@ public:
 public:
 	[[nodiscard]]
 	_Check_return_
-	_Success_(return == true)
+	_Success_(return != nullptr)
 	const void* const operator()(
 		_In_ const void* const vpNewFunction
 	) noexcept;
@@ -40,7 +40,7 @@ public:
 public:
 	[[nodiscard]]
 	_Check_return_
-	_Success_(return == true)
+	_Success_(return != nullptr)
 	const void* const attach(
 		_In_ const void* const vpNewFunction
 	) noexcept;

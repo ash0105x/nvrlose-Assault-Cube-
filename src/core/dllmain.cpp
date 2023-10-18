@@ -1,17 +1,22 @@
 // dllmain.cpp : Defines the entry point for the DLL application.
 #include"win32api.h"
 
+// utility functions
 import utils;
+// CConsole class
 import CConsole;
+// CPlayer class
 import CPlayer;
+// offsets and memory addresses
 import offsets;
+// CTrampolineHook32 class
 import CTrampolineHook32;
 
 // std::cout, std::uintptr_t, ...
 import <iostream>;
 
 // vec3EyePosition = playerent + 0x0004
-// vec2Velocity = playerent + 0x0028
+// vec3Velocity = playerent + 0x0028
 // vec3FeetPosition = playerent + 0x0034
 // vec2ViewAngles = playerent + 0x0040
 // bOnGround = playerent + 0x69
@@ -40,9 +45,9 @@ namespace globals {
 
 typedef BOOL(__stdcall* wglSwapBuffers_t)(_In_ const HDC hdc) noexcept;
 
-wglSwapBuffers_t p_wglSwapBuffersGateway = nullptr;
+static wglSwapBuffers_t p_wglSwapBuffersGateway = nullptr;
 
-BOOL __stdcall hk_wglSwapBuffers(
+static BOOL __stdcall hk_wglSwapBuffers(
     _In_ const HDC hdc
 ) noexcept;
 
@@ -103,10 +108,14 @@ static DWORD CALLBACK MainThread(
 
     CPlayer* const pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(ac_client_exe + offsets::ac_client_exe::LOCAL_PLAYER);
 
-    std::cout << "\n&pLocalPlayer->i32MoveType -> 0x" << &pLocalPlayer->i32MoveType;
+    std::cout << "\n&pLocalPlayer->i32MoveType -> 0x" << &pLocalPlayer->iMoveType;
 
     while (!GetAsyncKeyState(VK_END)) {
-        std::cout << "\npLocalPlayer->i32MoveType -> " << pLocalPlayer->i32MoveType;
+        system("cls");
+        std::cout << "pLocalPlayer->i32MoveType -> " << pLocalPlayer->iMoveType;
+
+        std::cout << "\nHealth -> " << pLocalPlayer->iHealth << '\n' << pLocalPlayer->vec2ViewAngles.x << " | " << pLocalPlayer->vec2ViewAngles.y;
+
         Sleep(200ul);
     }
 
@@ -183,7 +192,7 @@ BOOL APIENTRY DllMain(
     return TRUE;
 }
 
-BOOL __stdcall hk_wglSwapBuffers(
+static BOOL __stdcall hk_wglSwapBuffers(
     _In_ const HDC hdc
 ) noexcept
 {

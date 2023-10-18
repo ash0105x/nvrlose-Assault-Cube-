@@ -115,19 +115,19 @@ const void* const CTrampolineHook32::attach(
 	return this->jumpFromHookAddressToNewFunction(vpNewFunction) ? this->m_bpGateway : nullptr;
 }
 
-static void releaseGatewayAndSetToNullptr(BYTE*& bpGateway) noexcept {
-	if (!bpGateway) {
-		return;
-	}
-
-	VirtualFree(
-		bpGateway,
-		NULL,
-		MEM_FREE
-	);
-
-	bpGateway = nullptr;
-}
+//static void releaseGatewayAndSetToNullptr(BYTE*& bpGateway) noexcept {
+//	if (!bpGateway) {
+//		return;
+//	}
+//
+//	VirtualFree(
+//		bpGateway,
+//		NULL,
+//		MEM_FREE
+//	);
+//
+//	bpGateway = nullptr;
+//}
 
 _Success_(return == true)
 bool CTrampolineHook32::detach(void) noexcept {
@@ -135,6 +135,20 @@ bool CTrampolineHook32::detach(void) noexcept {
 		return false;
 	}
 	
+	const auto releaseGatewayAndSetToNullptr = [this](void) noexcept {
+		if (!this->m_bpGateway) {
+			return;
+		}
+
+		VirtualFree(
+			this->m_bpGateway,
+			NULL,
+			MEM_FREE
+		);
+
+		this->m_bpGateway = nullptr;
+	};
+
 	DWORD dwPreviousProtection = NULL;
 
 	if (
@@ -146,7 +160,7 @@ bool CTrampolineHook32::detach(void) noexcept {
 		)
 	)
 	{
-		releaseGatewayAndSetToNullptr(this->m_bpGateway);
+		releaseGatewayAndSetToNullptr();
 
 		return false;
 	}
@@ -166,7 +180,7 @@ bool CTrampolineHook32::detach(void) noexcept {
 		&dwTempProtection
 	);
 
-	releaseGatewayAndSetToNullptr(this->m_bpGateway);
+	releaseGatewayAndSetToNullptr();
 
 	return true;
 }
