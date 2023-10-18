@@ -29,6 +29,7 @@ export typedef enum : std::uint32_t {
 // i32Ammo = playerent + 0x0150
 // i32FiringSpeed = playerent + 0x0178
 // i32ShotsFired = playerent + 0x01A0
+// cstrName = playerent + 0x225
 
 // Created with ReClass.NET 1.2 by KN4CK3R
 
@@ -41,7 +42,7 @@ private:
 public:
 	Vector3 vec3Velocity = Vector3{ 0.f, 0.f, 0.f }; //0x0028
 	Vector3 vec3FeetPosition = Vector3{ 0.f, 0.f, 0.f }; //0x0034
-	Vector2 vec2ViewAngles = Vector2{ 0.f,0.f }; //0x0040
+	Vector2 vec2ViewAngles = Vector2{ 0.f, 0.f }; //0x0040
 private:
 	const char pad_0048[20] = { }; //0x0048
 public:

@@ -12,6 +12,8 @@ import offsets;
 // CTrampolineHook32 class
 import CTrampolineHook32;
 
+import globals;
+
 // std::cout, std::uintptr_t, ...
 import <iostream>;
 
@@ -27,12 +29,22 @@ import <iostream>;
 // i32Ammo = playerent + 0x0150
 // i32FiringSpeed = playerent + 0x0178
 // i32ShotsFired = playerent + 0x01A0
+// cstrName = playerent + 0x225
+// currentPlayerInGame = "ac_client.exe" + 0x10f500
 
 // entity list -> "ac_client.exe" + 0x0010F4F8
-// first entity = "ac_client.exe" + 0x0010F4F8 + 0x4
+// first entity = ["ac_client.exe" + 0x0010F4F8] + 0x4
 // second enttiy = "ac_client.exe" + 0x0010F4F8 + 0x4 + 0x4
+// first three entities = ["ac_client.exe" + 0x0010F4F8] + (i * 0x4)
+// other three entitites = ["ac_client.exe" + 0x0010F4F8] + 0x190 + (i * 0x4)
 
-// some player -> "ac_client.exe" + 0x0010F4F8 [0xC] [0xF8]
+//for (std::int32_t i = NULL; i < currentPlayerInGame; ++i) {
+//    CPlayer* const pPlayer = *reinterpret_cast<CPlayer* const* const>(pEntityList + (i * 0x04));
+//
+//    if (!pPlayer) {
+//        continue;
+//    }
+//}
 
 namespace globals {
     namespace thread {
@@ -43,7 +55,9 @@ namespace globals {
     static const decltype(__TEXT(' '))* pErrorMessage = nullptr;
 }
 
-typedef BOOL(__stdcall* wglSwapBuffers_t)(_In_ const HDC hdc) noexcept;
+typedef std::int32_t(__cdecl* const printToConsole_t)(_In_z_ _Printf_format_string_ const char* const, ...) noexcept;
+
+typedef BOOL(__stdcall* wglSwapBuffers_t)(_In_ const HDC) noexcept;
 
 static wglSwapBuffers_t p_wglSwapBuffersGateway = nullptr;
 
@@ -55,17 +69,11 @@ static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
 ) noexcept
 {
-    std::cout << "\nCurrent thread Id: " << globals::thread::dwId << "\nRetrieving module \"ac_client.exe\"...\n\t\\\n\t \\___";
+    std::cout << "\nCurrent thread Id: " << globals::thread::dwId;
 
-    const std::uintptr_t ac_client_exe = reinterpret_cast<const std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe")));
+    const printToConsole_t printToConsole = reinterpret_cast<const printToConsole_t>(0x4090F0);
 
-    if (!ac_client_exe) {
-        globals::pErrorMessage = __TEXT("Failed to retrieve module \"ac_client.exe\"");
-        globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("Failed!");
-        utils::dll::eject(vpInstDLL, ERROR_MOD_NOT_FOUND);
-    }
-    
-    globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_GREEN>("Success! -> 0x%p", reinterpret_cast<const void* const>(ac_client_exe));
+    printToConsole("Current thread Id: ", globals::thread::dwId);
 
     std::cout << "\nRetrieving module \"opengl32.dll\"...\n\t\\\n\t \\___";
 
@@ -106,15 +114,17 @@ static DWORD CALLBACK MainThread(
     globals::pConsole = nullptr;
 #endif // !_DEBUG
 
-    CPlayer* const pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(ac_client_exe + offsets::ac_client_exe::LOCAL_PLAYER);
+    globals::entity::pEntityList = *reinterpret_cast<std::array<CPlayer* const, 32u>** const>(globals::modules::ac_client_exe + offsets::ac_client_exe::ENTITY_LIST);
 
-    std::cout << "\n&pLocalPlayer->i32MoveType -> 0x" << &pLocalPlayer->iMoveType;
+    globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer** const>(globals::modules::ac_client_exe + offsets::ac_client_exe::LOCAL_PLAYER);
+
+    std::cout << "\n&globals::entity::pLocalPlayer->i32MoveType -> 0x" << &globals::entity::pLocalPlayer->iMoveType;
 
     while (!GetAsyncKeyState(VK_END)) {
         system("cls");
-        std::cout << "pLocalPlayer->i32MoveType -> " << pLocalPlayer->iMoveType;
+        std::cout << "globals::entity::pLocalPlayer->i32MoveType -> " << globals::entity::pLocalPlayer->iMoveType;
 
-        std::cout << "\nHealth -> " << pLocalPlayer->iHealth << '\n' << pLocalPlayer->vec2ViewAngles.x << " | " << pLocalPlayer->vec2ViewAngles.y;
+        std::cout << "\nHealth -> " << globals::entity::pLocalPlayer->iHealth << '\n' << globals::entity::pLocalPlayer->vec2ViewAngles.x << " | " << globals::entity::pLocalPlayer->vec2ViewAngles.y;
 
         Sleep(200ul);
     }
@@ -151,6 +161,13 @@ BOOL APIENTRY DllMain(
         }
         else {
             globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("Failed!");
+        }
+
+        if (!globals::modules::ac_client_exe) {
+            globals::pErrorMessage = __TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into a wrong process!");
+            globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("\nFailed to retrieve module \"ac_client.exe\"!");
+            FreeLibrary(hInstDLL);
+            return TRUE;
         }
 
         std::cout << "\nCreating a thread to fully instantiate the cheat...\n\t\\\n\t \\___";

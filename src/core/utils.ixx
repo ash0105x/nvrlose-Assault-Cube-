@@ -36,6 +36,16 @@ export namespace utils {
 			return bpDMAAddress;
 		}
 	}
+
+	/*namespace entity {
+		CPlayer& fromIndex(
+			_In_ const std::uint8_t uIndex
+		) noexcept
+		{
+			return *reinterpret_cast<CPlayer* const>(globals::entity::entityList + (uIndex * sizeof(std::uintptr_t)));
+		}
+	}*/
+
 	namespace messagebox {
 		void errorA(
 			_In_z_ const char* const cstrBody
