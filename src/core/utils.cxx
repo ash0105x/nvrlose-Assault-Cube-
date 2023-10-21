@@ -2,8 +2,13 @@ import utils;
 
 #include"win32api.h"
 
-import <iostream>;
-import <assert.h>;
+#include<iostream>
+#include<assert.h>
+
+//import <iostream>;
+//import <assert.h>;
+
+import globals;
 
 [[nodiscard]]
 _Must_inspect_result_
@@ -55,9 +60,7 @@ __declspec(noreturn) void utils::dll::eject(
 	_In_ DWORD dwExitCode
 ) noexcept
 {
-#ifdef _DEBUG
-	std::cout << "\nExitting..." << std::flush;
-#endif // _DEBUG
+	(*globals::function::pointer::pPopupMessage)("Exitting...");
 
 	FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
 }

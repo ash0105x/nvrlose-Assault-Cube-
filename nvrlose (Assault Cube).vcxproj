@@ -169,19 +169,37 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\core\CConsole.cxx" />
-    <ClCompile Include="src\core\CConsole.ixx" />
     <ClCompile Include="src\core\CPlayer.ixx" />
+    <ClCompile Include="src\core\CRenderer.cxx" />
+    <ClCompile Include="src\core\CRenderer.ixx" />
     <ClCompile Include="src\core\CTrampolineHook32.cxx" />
     <ClCompile Include="src\core\CTrampolineHook32.ixx" />
+    <ClCompile Include="src\core\CWindow.cxx" />
+    <ClCompile Include="src\core\CWindow.ixx" />
     <ClCompile Include="src\core\dllmain.cpp" />
     <ClCompile Include="src\core\globals.ixx" />
     <ClCompile Include="src\core\offsets.ixx" />
     <ClCompile Include="src\core\utils.cxx" />
     <ClCompile Include="src\core\utils.ixx" />
+    <ClCompile Include="src\external\ImGui\imgui.cpp" />
+    <ClCompile Include="src\external\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="src\external\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="src\external\ImGui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\external\ImGui\imgui_impl_win32.cpp" />
+    <ClCompile Include="src\external\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="src\external\ImGui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\win32api.h" />
+    <ClInclude Include="src\external\ImGui\imconfig.h" />
+    <ClInclude Include="src\external\ImGui\imgui.h" />
+    <ClInclude Include="src\external\ImGui\imgui_impl_opengl3.h" />
+    <ClInclude Include="src\external\ImGui\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="src\external\ImGui\imgui_impl_win32.h" />
+    <ClInclude Include="src\external\ImGui\imgui_internal.h" />
+    <ClInclude Include="src\external\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="src\external\ImGui\imstb_textedit.h" />
+    <ClInclude Include="src\external\ImGui\imstb_truetype.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

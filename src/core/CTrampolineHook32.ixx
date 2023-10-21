@@ -9,7 +9,10 @@ static_assert(sizeof(BYTE) == 1u);
 export class CTrampolineHook32 final {
 public:
 	[[nodiscard]] explicit CTrampolineHook32(
-		_In_ void* vpHookAddress,
+		[[maybe_unused]] _In_ std::nullptr_t = nullptr
+	) noexcept;
+	[[nodiscard]] explicit CTrampolineHook32(
+		_In_ void* const vpHookAddress,
 		_In_ const size_t hookLength
 	) noexcept;
 	CTrampolineHook32(
@@ -26,7 +29,7 @@ public:
 		_Inout_ CTrampolineHook32&&
 	) noexcept;
 public:
-	~CTrampolineHook32(void) noexcept;
+	~CTrampolineHook32( void ) noexcept;
 public:
 	[[nodiscard]]
 	_Check_return_
@@ -36,7 +39,7 @@ public:
 	) noexcept;
 
 	_Success_(return == true)
-	bool operator~(void) noexcept;
+	bool operator~( void ) noexcept;
 public:
 	[[nodiscard]]
 	_Check_return_

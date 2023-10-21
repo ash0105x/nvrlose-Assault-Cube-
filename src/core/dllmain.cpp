@@ -3,19 +3,20 @@
 
 // utility functions
 import utils;
-// CConsole class
-import CConsole;
 // CPlayer class
 import CPlayer;
 // offsets and memory addresses
 import offsets;
 // CTrampolineHook32 class
 import CTrampolineHook32;
-
+// CRenderer class
+import CRenderer;
+// globals namespace
 import globals;
 
-// std::cout, std::uintptr_t, ...
-import <iostream>;
+// std::uintptr_t, std::bad_alloc, ...
+#include<iostream>
+//import <iostream>;
 
 // vec3EyePosition = playerent + 0x0004
 // vec3Velocity = playerent + 0x0028
@@ -38,100 +39,157 @@ import <iostream>;
 // first three entities = ["ac_client.exe" + 0x0010F4F8] + (i * 0x4)
 // other three entitites = ["ac_client.exe" + 0x0010F4F8] + 0x190 + (i * 0x4)
 
-//for (std::int32_t i = NULL; i < currentPlayerInGame; ++i) {
-//    CPlayer* const pPlayer = *reinterpret_cast<CPlayer* const* const>(pEntityList + (i * 0x04));
-//
-//    if (!pPlayer) {
-//        continue;
-//    }
-//}
-
 namespace globals {
     namespace thread {
-        static DWORD dwId = false;
+        static DWORD dwId = NULL;
     }
 
-    static CConsole* pConsole = nullptr;
-    static const decltype(__TEXT(' '))* pErrorMessage = nullptr;
+    namespace modules {
+        static std::uintptr_t ac_client_exe = NULL;
+    }
+
+    static CRenderer* pRenderer = nullptr;
 }
 
-typedef std::int32_t(__cdecl* const printToConsole_t)(_In_z_ _Printf_format_string_ const char* const, ...) noexcept;
+static const DWORD* dwpJumpBackAddress = nullptr;
 
-typedef BOOL(__stdcall* wglSwapBuffers_t)(_In_ const HDC) noexcept;
-
-static wglSwapBuffers_t p_wglSwapBuffersGateway = nullptr;
-
-static BOOL __stdcall hk_wglSwapBuffers(
-    _In_ const HDC hdc
-) noexcept;
+static void __declspec(naked) hkHealthOpcode( void ) noexcept {
+    __asm {
+        // setting eax to our localPlayer
+        // eax is dwpLocalPlayer
+        mov eax, dword ptr[globals::modules::ac_client_exe] // dwpLocalPlayer = globals::modules::ac_client_exe
+        add eax, dword ptr[offsets::ac_client_exe::LOCAL_PLAYER] // dwpLocalPlayer += offsets::ac_client_exe::LOCAL_PLAYER
+        mov eax, dword ptr[eax] // dwpLocalPlayer = *dwpLocalPlayer
+        // retrieving the player class of the player calling this function:
+        push ebx
+        sub ebx, 0xF4u // dwpPlayer -= 0xF4u
+        cmp ebx, eax // if (dwpPlayer == dwpLocalPlayer)
+        pop ebx
+        je onLocalPlayer // jump if dwpPlayer is dwpLocalPlayer
+        // edi is iDamage
+        // dword ptr[ebx + 0x4u] is iRefHealth
+        // else {
+        mov edi, dword ptr[ebx + 0x4u] // iDamage = iRefHealth
+        jmp stolenBytes
+        // }
+    onLocalPlayer:
+        sub edi, 9999999u // iDamage -= 9999999
+        sub edi, dword ptr[ebx + 0x4u] // iDamage -= iRefHealth
+    stolenBytes:
+        sub dword ptr[ebx + 0x4u], edi // iRefHealth -= iDamage
+        mov eax, edi // eax = iDamage
+        jmp dword ptr[dwpJumpBackAddress]
+    }
+}
 
 static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
 ) noexcept
 {
-    std::cout << "\nCurrent thread Id: " << globals::thread::dwId;
-
-    const printToConsole_t printToConsole = reinterpret_cast<const printToConsole_t>(0x4090F0);
-
-    printToConsole("Current thread Id: ", globals::thread::dwId);
-
-    std::cout << "\nRetrieving module \"opengl32.dll\"...\n\t\\\n\t \\___";
-
-    const HMODULE hOpenGL = GetModuleHandle(__TEXT("opengl32.dll"));
-
-    if (!hOpenGL) {
-        globals::pErrorMessage = __TEXT("Failed to retrieve module \"opengl32.dll\"");
-        globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("Failed!");
-        utils::dll::eject(vpInstDLL, ERROR_MOD_NOT_FOUND);
-    }
-
-    globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_GREEN>("Success! -> 0x%p", hOpenGL);
-
-    std::cout << "\nRetrieving function \"wglSwapBuffers\" of module \"opengl32.dll\"...\n\t\\\n\t \\___";
-
-    if (!(::p_wglSwapBuffersGateway = reinterpret_cast<const wglSwapBuffers_t>(GetProcAddress(hOpenGL, "wglSwapBuffers")))) {
-        globals::pErrorMessage = __TEXT("Failed to retrieve function \"wglSwapBuffers\" of module \"opengl32.dll\"");
-        globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("Failed!");
-        utils::dll::eject(vpInstDLL, ERROR_INVALID_FUNCTION);
-    }
-
-    globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_GREEN>("Success! -> 0x%p", ::p_wglSwapBuffersGateway);
-
-    std::cout << "\nHooking function \"wglSwapBuffers\" of module \"opengl32.dll\"...\n\t\\\n\t \\___";
-
-    CTrampolineHook32 wglSwapBuffersHook = CTrampolineHook32{ ::p_wglSwapBuffersGateway, 5u };
-
-    if (!(::p_wglSwapBuffersGateway = reinterpret_cast<const wglSwapBuffers_t>(wglSwapBuffersHook(&::hk_wglSwapBuffers)))) {
-        globals::pErrorMessage = __TEXT("Failed to hook function \"wglSwapBuffers\" of module \"opengl32.dll\"");
-        globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("Failed!");
-        utils::dll::eject(vpInstDLL, ERROR_INVALID_FUNCTION);
-    }
-
-    globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_GREEN>("Success! -> 0x%p", &::hk_wglSwapBuffers);
-
-#ifndef _DEBUG
-    delete globals::pConsole;
-    globals::pConsole = nullptr;
-#endif // !_DEBUG
+    (*globals::function::pointer::pPopupMessage)("Current thread Id: %d", globals::thread::dwId);
 
     globals::entity::pEntityList = *reinterpret_cast<std::array<CPlayer* const, 32u>** const>(globals::modules::ac_client_exe + offsets::ac_client_exe::ENTITY_LIST);
-
     globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer** const>(globals::modules::ac_client_exe + offsets::ac_client_exe::LOCAL_PLAYER);
+    globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t*>(globals::modules::ac_client_exe + offsets::ac_client_exe::CURRENT_PLAYER_IN_GAME);
 
-    std::cout << "\n&globals::entity::pLocalPlayer->i32MoveType -> 0x" << &globals::entity::pLocalPlayer->iMoveType;
+    BYTE* const bypHookAddress = reinterpret_cast<BYTE* const>(globals::modules::ac_client_exe + 0x29D1Fu);
+    constexpr const std::uint8_t u8HookLength = 5u;
+
+    std::array<BYTE, u8HookLength> byArrStolenBytes = std::array<BYTE, u8HookLength>{ };
+
+    memcpy_s(
+        byArrStolenBytes.data(),
+        byArrStolenBytes.size(),
+        bypHookAddress,
+        byArrStolenBytes.size()
+    );
+
+    ::dwpJumpBackAddress = reinterpret_cast<const DWORD*>(bypHookAddress + u8HookLength);
+
+    const DWORD dwRelativeOffset = reinterpret_cast<const std::uintptr_t>(&::hkHealthOpcode) - reinterpret_cast<const std::uintptr_t>(bypHookAddress) - 5u;
+    
+    DWORD dwPreviousProtection = NULL;
+    if (
+        !VirtualProtect(
+            bypHookAddress,
+            u8HookLength,
+            PAGE_EXECUTE_READWRITE,
+            &dwPreviousProtection
+        )
+    )
+    {
+        (*globals::function::pointer::pPopupMessage)("Failed to get permission to change the ingame code");
+        utils::dll::eject(vpInstDLL, ERROR_ACCESS_DENIED);
+    }
+
+    bypHookAddress[NULL] = 0xE9u;
+    *reinterpret_cast<DWORD* const>(bypHookAddress + 1u) = dwRelativeOffset;
+
+    DWORD dwTempProtection = NULL;
+    VirtualProtect(
+        bypHookAddress,
+        u8HookLength,
+        dwPreviousProtection,
+        &dwTempProtection
+    );
+
+    (*globals::function::pointer::pPopupMessage)("Exploiting vulnerabilities to make in-game-rendering possible");
+
+    try {
+        globals::pRenderer = new CRenderer{ };
+    }
+    catch (const std::bad_alloc&) {
+        (*globals::function::pointer::pPopupMessage)("Failed to allocate enough memory to hold the \"CRenderer\"-class!");
+
+        utils::dll::eject(vpInstDLL, ERROR_NOT_ENOUGH_MEMORY);
+    }
+
+    if (!globals::pRenderer->ok()) {
+        (*globals::function::pointer::pPopupMessage)("Failed to hook function \"wglSwapBuffers\" in module \"OpenGL32.dll\" to make in-game-rendering possible!");
+        
+        utils::dll::eject(vpInstDLL, ERROR_FUNCTION_FAILED);
+    }
+
+    (*globals::function::pointer::pPopupMessage)("Success :D");
 
     while (!GetAsyncKeyState(VK_END)) {
-        system("cls");
-        std::cout << "globals::entity::pLocalPlayer->i32MoveType -> " << globals::entity::pLocalPlayer->iMoveType;
+        /*system("cls");
 
-        std::cout << "\nHealth -> " << globals::entity::pLocalPlayer->iHealth << '\n' << globals::entity::pLocalPlayer->vec2ViewAngles.x << " | " << globals::entity::pLocalPlayer->vec2ViewAngles.y;
+        for (std::uint32_t i = 1u; i < *globals::match::ipPlayerInGame; ++i) {
+            std::cout << "Entity #" << i << " @ 0x";
+
+            const CPlayer& refEntity = (*(*globals::entity::pEntityList)[i]);
+
+            std::cout << &refEntity << " health -> " << refEntity.iHealth << '\n';
+        }*/
 
         Sleep(200ul);
     }
 
-    if (!~wglSwapBuffersHook) {
-        globals::pErrorMessage = __TEXT("Failed to unhook function \"wglSwapBuffers\" of module \"opengl32.dll\"");
+    if (
+        !VirtualProtect(
+            bypHookAddress,
+            u8HookLength,
+            PAGE_EXECUTE_READWRITE,
+            &dwPreviousProtection
+        )
+    )
+    {
+        (*globals::function::pointer::pPopupMessage)("Failed to get permission to change the ingame code");
+        utils::dll::eject(vpInstDLL, ERROR_ACCESS_DENIED);
     }
+    memcpy_s(
+        bypHookAddress,
+        byArrStolenBytes.size(),
+        byArrStolenBytes.data(),
+        byArrStolenBytes.size()
+    );
+    VirtualProtect(
+        bypHookAddress,
+        u8HookLength,
+        dwPreviousProtection,
+        &dwTempProtection
+    );
 
     utils::dll::eject(vpInstDLL, ERROR_SUCCESS);
     return TRUE;
@@ -144,33 +202,20 @@ BOOL APIENTRY DllMain(
     _In_ [[maybe_unused]] const void* const lpvReserved
 ) noexcept
 {
+    static const decltype(__TEXT(' '))* pErrorMessage = nullptr;
+
     if (DLL_PROCESS_ATTACH == fdwReason) {
-        try {
-            globals::pConsole = new CConsole{ __TEXT("nvrlose") };
-        }
-        catch (const std::bad_alloc&) {
-            globals::pErrorMessage = __TEXT("Failed to allocate enough memory to create a console");
+        if(!(globals::modules::ac_client_exe = reinterpret_cast<const std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe"))))) {
+            pErrorMessage = __TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into the wrong process!");
             FreeLibrary(hInstDLL);
             return TRUE;
         }
 
-        std::cout << "Disabling thread library calls...\n\t\\\n\t \\___";
+        globals::function::pointer::pPopupMessage = reinterpret_cast<const globals::function::definition::_popupMessage_t>(offsets::function::POPUP_MESSAGE);
 
-        if (DisableThreadLibraryCalls(hInstDLL)) {
-            globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_GREEN>("Success!");
+        if (!DisableThreadLibraryCalls(hInstDLL)) {
+            (*globals::function::pointer::pPopupMessage)("Failed to disable thread library calls!");
         }
-        else {
-            globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("Failed!");
-        }
-
-        if (!globals::modules::ac_client_exe) {
-            globals::pErrorMessage = __TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into a wrong process!");
-            globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("\nFailed to retrieve module \"ac_client.exe\"!");
-            FreeLibrary(hInstDLL);
-            return TRUE;
-        }
-
-        std::cout << "\nCreating a thread to fully instantiate the cheat...\n\t\\\n\t \\___";
 
         const HANDLE hThread = CreateThread(
             nullptr,
@@ -182,13 +227,10 @@ BOOL APIENTRY DllMain(
         );
 
         if (!hThread) {
-            globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_RED>("Failed!");
-            globals::pErrorMessage = __TEXT("Failed to create a seperate thread!");
+            (*globals::function::pointer::pPopupMessage)("Failed to create a seperate thread to fully instantiate the cheat!");
             FreeLibrary(hInstDLL);
             return TRUE;
         }
-
-        globals::pConsole->printColored<COLORED_TEXT::COLORED_TEXT_GREEN>("Success!");
 
         SetThreadDescription(hThread, L"nvrlose client main");
 
@@ -197,34 +239,15 @@ BOOL APIENTRY DllMain(
         CloseHandle(hThread);
     }
     else if (DLL_PROCESS_DETACH == fdwReason) {
-        if (globals::pConsole) {
-            delete globals::pConsole;
+        if (pErrorMessage) {
+            (*utils::messagebox::error)(pErrorMessage);
+            return TRUE;
         }
 
-        if (globals::pErrorMessage) {
-            (*utils::messagebox::error)(globals::pErrorMessage);
+        if (globals::pRenderer) {
+            delete globals::pRenderer;
         }
     }
 
     return TRUE;
-}
-
-static BOOL __stdcall hk_wglSwapBuffers(
-    _In_ const HDC hdc
-) noexcept
-{
-    static decltype(auto) printONCE = [](void) noexcept -> bool {
-        std::cout << "\nSuccessfully hooked!";
-        return true;
-    }();
-
-    static std::uint64_t counter = NULL;
-
-    if (counter > 5u) {
-        return (*::p_wglSwapBuffersGateway)(hdc);
-    }
-
-    std::cout << '\n' << ++counter;
-
-    return (*::p_wglSwapBuffersGateway)(hdc);
 }

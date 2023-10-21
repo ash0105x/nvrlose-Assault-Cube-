@@ -26,4 +26,8 @@ export namespace offsets {
         constexpr const ptrdiff_t I_SHOTS_FIRED = 0x01A0u;
         constexpr const ptrdiff_t CSTR_NAME = 0x225u;
     }
+
+    namespace function {
+        constexpr const uintptr_t POPUP_MESSAGE = 0x4090F0u;
+    }
 }
