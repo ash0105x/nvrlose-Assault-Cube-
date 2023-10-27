@@ -9,10 +9,13 @@ import globals;
 
 #include<string>
 
+#include<gl/GL.h>
+#pragma comment(lib, "opengl32.lib")
+
 #include"../external/ImGui/imgui.h"
-#include"../external/ImGui/imgui_impl_opengl3_loader.h"
-#include"../external/ImGui/imgui_impl_opengl3.h"
 #include"../external/ImGui/imgui_impl_win32.h"
+#include"../external/ImGui/imgui_impl_opengl2.h"
+
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -55,12 +58,12 @@ CRenderer::~CRenderer( void ) noexcept {
     )
     {
         CRenderer::_AssaultCubeWindow.changeWndProc(refOriginalWndProc);
-        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplOpenGL2_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
     }
     else if (CRenderer::_bImGuiOpenGLInitialized) {
-        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplOpenGL2_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
     }
@@ -79,14 +82,14 @@ const bool& CRenderer::ok( void ) const noexcept {
 
 void CRenderer::begin( void ) noexcept {
     ImGui_ImplWin32_NewFrame();
-    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplOpenGL2_NewFrame();
     ImGui::NewFrame();
 }
 
 void CRenderer::end( void ) noexcept {
     ImGui::EndFrame();
     ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 }
 
 LRESULT CALLBACK CRenderer::hk_WndProc(
@@ -126,26 +129,36 @@ BOOL __stdcall CRenderer::hk_wglSwapBuffers(
 ) noexcept
 {
     if (!globals::ImGui::bInitialized) {
+        const auto onFailureMessage = [](void) noexcept -> void {
+            globals::ImGui::bTriedToInitializeAtleastOnce = true;
+
+            (*globals::function::pointer::pPopupMessage)("Failed to initialize ImGui");
+        };
+
         if (globals::ImGui::bTriedToInitializeAtleastOnce) {
             return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
         }
 
-        ImGui::CreateContext();
+        IMGUI_CHECKVERSION();
+
+        if (!ImGui::CreateContext()) {
+            onFailureMessage();
+
+            return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
+        }
+
+        [[maybe_unused]] ImGuiIO& refIO = ImGui::GetIO();
 
         if (!ImGui_ImplWin32_Init(static_cast<const HWND>(CRenderer::_AssaultCubeWindow))) {
-            globals::ImGui::bTriedToInitializeAtleastOnce = true;
-
-            (*globals::function::pointer::pPopupMessage)("Failed to initialize ImGui");
+            onFailureMessage();
 
             return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
         }
 
         CRenderer::_bImGuiWin32Initialized = true;
 
-        if (!ImGui_ImplOpenGL3_Init(nullptr)) {
-            globals::ImGui::bTriedToInitializeAtleastOnce = true;
-
-            (*globals::function::pointer::pPopupMessage)("Failed to initialize ImGui");
+        if (!ImGui_ImplOpenGL2_Init()) {
+            onFailureMessage();
 
             return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
         }
@@ -155,26 +168,23 @@ BOOL __stdcall CRenderer::hk_wglSwapBuffers(
         CRenderer::_AssaultCubeWindow.changeWndProc(&CRenderer::hk_WndProc);
 
         globals::ImGui::bInitialized = true;
+        goto onSuccess;
 
         /*if (!(globals::ImGui::bInitialized = CRenderer::_AssaultCubeWindow.changeWndProc(&CRenderer::hk_WndProc))) {
             return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
         }*/
     }
-
-    if (!globals::ImGui::bInitialized) {
-        return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
-    }
-
-    CRenderer::begin();
+onSuccess:
+    //CRenderer::begin();
 
     constexpr const char cstrClientName[] = (
-        "nvrlose client "
+        "nvrlose client"
 #ifdef _DEBUG
-        "(dev build) "
+        " (dev build)"
 #endif // _DEBUG
     );
 
-    if (
+    /*if (
         ImGui::Begin(
             cstrClientName
         )
@@ -187,9 +197,17 @@ BOOL __stdcall CRenderer::hk_wglSwapBuffers(
         ImGui::Checkbox("Am i checked?", &bIsChecked);
 
     }
-    ImGui::End();
+    ImGui::End();*/
 
-    CRenderer::end();
+    //ImGui::ShowDemoWindow();
+
+
+    //CRenderer::end();
+
+    glBegin(GL_LINES);
+    glVertex2i(100, 200);
+    glVertex2i(300, 400);
+    glEnd();
 
 	return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
 }

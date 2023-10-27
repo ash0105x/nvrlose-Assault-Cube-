@@ -1,16 +1,27 @@
 export module offsets;
 
-// ptrdiff_t
-import <vcruntime.h>;
+typedef int ptrdiff_t;
+typedef unsigned int uintptr_t;
 
 export namespace offsets {
-    // type_t* ptr = reinterpret_cast<type_t*>(reinterpret_cast<std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe"))) + offsets::ac_client_exe::offset);
     namespace ac_client_exe {
-        constexpr const ptrdiff_t ENTITY_LIST = 0x0010F4F8u;
-        constexpr const ptrdiff_t LOCAL_PLAYER = offsets::ac_client_exe::ENTITY_LIST - 0x4u;
-        constexpr const ptrdiff_t CURRENT_PLAYER_IN_GAME = 0x10f500u;
+        // type_t* ptr = reinterpret_cast<type_t*>(reinterpret_cast<std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe"))) + offsets::ac_client_exe::{offset});
+        namespace pointer {
+            constexpr const ptrdiff_t ENTITY_LIST = 0x0010F4F8u;
+            constexpr const ptrdiff_t LOCAL_PLAYER = offsets::ac_client_exe::pointer::ENTITY_LIST - 0x4u;
+            constexpr const ptrdiff_t CURRENT_PLAYER_IN_GAME = 0x10f500u;
+        }
+
+        // typedef type_t({callingConvention}* func_t)({parameterList});
+        // or
+        // using func_t = type_t({callingConvention}*)({parameterList});
+        // func_t funcPtr = reinterpret_cast<func_t>(reinterpret_cast<std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe"))) + offsets::ac_client_exe::function::{offset});
+        namespace function {
+            constexpr const uintptr_t POPUP_MESSAGE = /*0x4090F0u*/ 0x090F0u;
+        }
     }
 
+    // type_t* ptr = reinterpret_cast<type_t*>(reinterpret_cast<std::uintptr_t>(pPlayer) + offsets::player::{offset});
     namespace player {
         constexpr const ptrdiff_t VEC3_EYE_POSITION = 0x0004u;
         constexpr const ptrdiff_t VEC3_VELOCITY = 0x0028u;
@@ -24,10 +35,6 @@ export namespace offsets {
         constexpr const ptrdiff_t I_AMMO = 0x0150u;
         constexpr const ptrdiff_t I_FIRING_SPEED = 0x0178u;
         constexpr const ptrdiff_t I_SHOTS_FIRED = 0x01A0u;
-        constexpr const ptrdiff_t CSTR_NAME = 0x225u;
-    }
-
-    namespace function {
-        constexpr const uintptr_t POPUP_MESSAGE = 0x4090F0u;
+        constexpr const ptrdiff_t CSTR_NICKNAME = 0x225u;
     }
 }

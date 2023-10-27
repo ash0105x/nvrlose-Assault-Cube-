@@ -16,28 +16,9 @@ import globals;
 
 // std::uintptr_t, std::bad_alloc, ...
 #include<iostream>
-//import <iostream>;
 
-// vec3EyePosition = playerent + 0x0004
-// vec3Velocity = playerent + 0x0028
-// vec3FeetPosition = playerent + 0x0034
-// vec2ViewAngles = playerent + 0x0040
-// bOnGround = playerent + 0x69
-// fCameraHeight = playerent + 0x005C
-// bIsNotShooting = playerent + 0x70
-// i32MoveType = playerent + 0x80 -> 1 = forward, 255 = backward, 256 = left, 65280 = right
-// i32Health = playerent + 0x00F8
-// i32Ammo = playerent + 0x0150
-// i32FiringSpeed = playerent + 0x0178
-// i32ShotsFired = playerent + 0x01A0
-// cstrName = playerent + 0x225
-// currentPlayerInGame = "ac_client.exe" + 0x10f500
-
-// entity list -> "ac_client.exe" + 0x0010F4F8
-// first entity = ["ac_client.exe" + 0x0010F4F8] + 0x4
-// second enttiy = "ac_client.exe" + 0x0010F4F8 + 0x4 + 0x4
-// first three entities = ["ac_client.exe" + 0x0010F4F8] + (i * 0x4)
-// other three entitites = ["ac_client.exe" + 0x0010F4F8] + 0x190 + (i * 0x4)
+// std::numeric_limits<const float>::max()
+#include<limits>
 
 namespace globals {
     namespace thread {
@@ -51,33 +32,28 @@ namespace globals {
     static CRenderer* pRenderer = nullptr;
 }
 
+constexpr double PI = static_cast<const double>(3.14159265358979323846);
 static const DWORD* dwpJumpBackAddress = nullptr;
 
 static void __declspec(naked) hkHealthOpcode( void ) noexcept {
     __asm {
-        // setting eax to our localPlayer
-        // eax is dwpLocalPlayer
-        mov eax, dword ptr[globals::modules::ac_client_exe] // dwpLocalPlayer = globals::modules::ac_client_exe
-        add eax, dword ptr[offsets::ac_client_exe::LOCAL_PLAYER] // dwpLocalPlayer += offsets::ac_client_exe::LOCAL_PLAYER
-        mov eax, dword ptr[eax] // dwpLocalPlayer = *dwpLocalPlayer
-        // retrieving the player class of the player calling this function:
-        push ebx
-        sub ebx, 0xF4u // dwpPlayer -= 0xF4u
-        cmp ebx, eax // if (dwpPlayer == dwpLocalPlayer)
-        pop ebx
-        je onLocalPlayer // jump if dwpPlayer is dwpLocalPlayer
-        // edi is iDamage
-        // dword ptr[ebx + 0x4u] is iRefHealth
-        // else {
-        mov edi, dword ptr[ebx + 0x4u] // iDamage = iRefHealth
-        jmp stolenBytes
-        // }
+        mov eax, dword ptr[globals::modules::ac_client_exe]
+        add eax, dword ptr[offsets::ac_client_exe::pointer::LOCAL_PLAYER]
+        mov eax, dword ptr[eax]
+        add eax, 0xF4u
+
+        cmp ebx, eax
+
+        je onLocalPlayer
+
+        mov eax, dword ptr[ebx + 0x4u]
+        sub dword ptr[ebx + 0x4u], eax
+
+        jmp dword ptr[dwpJumpBackAddress]
     onLocalPlayer:
-        sub edi, 9999999u // iDamage -= 9999999
-        sub edi, dword ptr[ebx + 0x4u] // iDamage -= iRefHealth
-    stolenBytes:
-        sub dword ptr[ebx + 0x4u], edi // iRefHealth -= iDamage
-        mov eax, edi // eax = iDamage
+        mov dword ptr[ebx + 0x4u], 9999999u
+        xor ecx, ecx
+
         jmp dword ptr[dwpJumpBackAddress]
     }
 }
@@ -88,9 +64,9 @@ static DWORD CALLBACK MainThread(
 {
     (*globals::function::pointer::pPopupMessage)("Current thread Id: %d", globals::thread::dwId);
 
-    globals::entity::pEntityList = *reinterpret_cast<std::array<CPlayer* const, 32u>** const>(globals::modules::ac_client_exe + offsets::ac_client_exe::ENTITY_LIST);
-    globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer** const>(globals::modules::ac_client_exe + offsets::ac_client_exe::LOCAL_PLAYER);
-    globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t*>(globals::modules::ac_client_exe + offsets::ac_client_exe::CURRENT_PLAYER_IN_GAME);
+    globals::entity::pEntityList = *reinterpret_cast<const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
+    globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
+    globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::CURRENT_PLAYER_IN_GAME);
 
     BYTE* const bypHookAddress = reinterpret_cast<BYTE* const>(globals::modules::ac_client_exe + 0x29D1Fu);
     constexpr const std::uint8_t u8HookLength = 5u;
@@ -133,9 +109,7 @@ static DWORD CALLBACK MainThread(
         &dwTempProtection
     );
 
-    (*globals::function::pointer::pPopupMessage)("Exploiting vulnerabilities to make in-game-rendering possible");
-
-    try {
+    /*try {
         globals::pRenderer = new CRenderer{ };
     }
     catch (const std::bad_alloc&) {
@@ -148,22 +122,58 @@ static DWORD CALLBACK MainThread(
         (*globals::function::pointer::pPopupMessage)("Failed to hook function \"wglSwapBuffers\" in module \"OpenGL32.dll\" to make in-game-rendering possible!");
         
         utils::dll::eject(vpInstDLL, ERROR_FUNCTION_FAILED);
-    }
+    }*/
 
-    (*globals::function::pointer::pPopupMessage)("Success :D");
+    const CVector3& vec3RefLocalPlayerEyePosition = globals::entity::pLocalPlayer->vec3EyePosition;
 
     while (!GetAsyncKeyState(VK_END)) {
-        /*system("cls");
+        if (!globals::entity::pLocalPlayer->uHealth) {
+            continue;
+        }
 
-        for (std::uint32_t i = 1u; i < *globals::match::ipPlayerInGame; ++i) {
-            std::cout << "Entity #" << i << " @ 0x";
+        globals::entity::pLocalPlayer->uAssaultRifleAmmo = 1337u;
 
-            const CPlayer& refEntity = (*(*globals::entity::pEntityList)[i]);
+        const CPlayer* pTarget = nullptr;
+        float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
 
-            std::cout << &refEntity << " health -> " << refEntity.iHealth << '\n';
-        }*/
+        CVector3 vec3Delta = CVector3{ };
 
-        Sleep(200ul);
+        for (std::uint8_t i = 1u; i < *globals::match::ipPlayerInGame; ++i) {
+            const CPlayer& refCurrentPlayer = *(*globals::entity::pEntityList)[i];
+
+            if (!refCurrentPlayer.uHealth) {
+                continue;
+            }
+
+            vec3Delta = refCurrentPlayer.vec3EyePosition - vec3RefLocalPlayerEyePosition;
+
+            const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();
+
+            if (fCurrentPlayerDistanceToLocalPlayer > fPlayerDistanceToLocalPlayer) {
+                continue;
+            }
+
+            fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
+            pTarget = &refCurrentPlayer;
+        }
+
+        if (!pTarget) {
+            continue;
+        }
+
+        constexpr const float fRadiansToDegreesValue = 180.f / static_cast<const float>(::PI);
+
+        float newPitch = std::asin(vec3Delta.z / fPlayerDistanceToLocalPlayer) * fRadiansToDegreesValue;
+
+        if (newPitch > 90.f) {
+            newPitch = 90.f;
+        }
+        else if (newPitch < -90.f) {
+            newPitch = -90.f;
+        }
+
+        globals::entity::pLocalPlayer->vec2ViewAngles.y = newPitch;
+        globals::entity::pLocalPlayer->vec2ViewAngles.x = (-std::atan2(vec3Delta.x, vec3Delta.y) * fRadiansToDegreesValue) + 180.f;
     }
 
     if (
@@ -211,7 +221,7 @@ BOOL APIENTRY DllMain(
             return TRUE;
         }
 
-        globals::function::pointer::pPopupMessage = reinterpret_cast<const globals::function::definition::_popupMessage_t>(offsets::function::POPUP_MESSAGE);
+        globals::function::pointer::pPopupMessage = reinterpret_cast<const globals::function::definition::_popupMessage_t>(globals::modules::ac_client_exe + offsets::ac_client_exe::function::POPUP_MESSAGE);
 
         if (!DisableThreadLibraryCalls(hInstDLL)) {
             (*globals::function::pointer::pPopupMessage)("Failed to disable thread library calls!");

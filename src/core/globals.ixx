@@ -20,7 +20,8 @@ export namespace globals {
 
 	namespace entity {
 		CPlayer* pLocalPlayer = nullptr;
-		std::array<CPlayer* const, 32u>* pEntityList = nullptr;
+		constexpr const std::uint8_t MAX_ENTITIES = 32u;
+		const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
 	}
 
 	namespace match {

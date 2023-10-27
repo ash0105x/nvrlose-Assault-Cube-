@@ -5,8 +5,8 @@ import CWindow;
 #include<exception>
 
 #include<assert.h>
-
 //import <assert.h>;
+
 
 [[nodiscard]] CWindow::CWindow(
 	[[maybe_unused]] _In_ const std::nullptr_t

@@ -164,7 +164,12 @@
 		#define STRICT                          // Use strict type checking
 	#endif // !STRICT
 #endif // !_DEBUG
+
+#ifndef NOMINMAX
+	#define NOMINMAX
+#endif // !NOMINMAX
 #pragma endregion // excludeDefinitions
+
 
 // Windows Header Files
 #include<Windows.h>                           // Windows API header

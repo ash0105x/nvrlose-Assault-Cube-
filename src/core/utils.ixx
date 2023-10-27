@@ -2,6 +2,8 @@ export module utils;
 
 import <sal.h>;
 import <vector>;
+import <cstdint>;
+import <array>;
 
 typedef unsigned long int DWORD;
 static_assert(sizeof(DWORD) == 4u);
@@ -23,17 +25,17 @@ export namespace utils {
 		_Must_inspect_result_
 		void* const findDMAAddress(
 			void* const vpStart,
-			const std::ptrdiff_t(&arrOffsets)[t_OffsetCount]
+			const std::array<std::ptrdiff_t, t_OffsetCount>& arrOffsets
 		) noexcept
 		{
-			BYTE* bpDMAAddress = static_cast<BYTE*>(vpStart);
+			BYTE* bypDMAAddress = static_cast<BYTE*>(vpStart);
 
 			for (const std::ptrdiff_t& refOffset : arrOffsets) {
-				bpDMAAddress = *reinterpret_cast<BYTE* const* const>(bpDMAAddress);
-				bpDMAAddress += refOffset;
+				bypDMAAddress = *reinterpret_cast<BYTE* const* const>(bypDMAAddress);
+				bypDMAAddress += refOffset;
 			}
 
-			return bpDMAAddress;
+			return bypDMAAddress;
 		}
 	}
 
