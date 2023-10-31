@@ -10,13 +10,13 @@ private:
 	virtual void _pad_index_1( void ) noexcept PURE;  // @index 1
 	virtual void _pad_index_2( void ) noexcept PURE;  // @index 2
 public:
-	virtual bool shoot(std::int32_t iArrUnknownArray[3u]) noexcept PURE; // @index 3
+	virtual bool shoot(float fArrRay[3u]) noexcept PURE; // @index 3
 private:
 	virtual void _pad_index_4( void ) noexcept PURE;  // @index 4
 	virtual void _pad_index_5( void ) noexcept PURE;  // @index 5
 	virtual void _pad_index_6( void ) noexcept PURE;  // @index 6
 public:
-	virtual bool reload(const bool bUnknown = false) noexcept PURE; // @index 7
+	virtual bool reload(const bool bUnknown = true) noexcept PURE; // @index 7
 private:
 	virtual void _pad_index_8( void ) noexcept PURE;  // @index 8
 	virtual void _pad_index_9( void ) noexcept PURE;  // @index 9

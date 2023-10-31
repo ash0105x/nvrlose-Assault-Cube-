@@ -72,7 +72,7 @@
     <ClCompile Include="src\external\ImGui\imgui_impl_opengl2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\interfaces\gun.ixx">
+    <ClCompile Include="src\core\AssaultCube\gun.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\CVector2.ixx">
@@ -85,6 +85,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\CVector3.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\AssaultCube\weapon.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\CTraceRay.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\CTraceRay.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

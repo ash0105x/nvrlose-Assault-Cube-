@@ -3,6 +3,7 @@ import CVector3;
 import <sal.h>;
 
 #include<cmath>
+#include<assert.h>
 
 [[nodiscard]] CVector3::CVector3(
 	_In_ const float x,
@@ -16,15 +17,17 @@ bool CVector3::isZero(void) const noexcept {
 	return this->x == 0.f && this->y == 0.f && this->z == 0.f;
 }
 
-CVector3& CVector3::scale(
+CVector3 CVector3::scale(
 	_In_ const float fFactor
-) noexcept
+) const noexcept
 {
-	this->x *= fFactor;
-	this->y *= fFactor;
-	this->z *= fFactor;
-
-	return *this;
+	return(
+		CVector3{
+			this->x * fFactor,
+			this->y * fFactor,
+			this->z * fFactor
+		}
+	);
 }
 
 float CVector3::length(void) const noexcept {
@@ -38,68 +41,77 @@ float CVector3::length(void) const noexcept {
 	);
 }
 
+float& CVector3::operator[](
+	_In_ const std::uint8_t u8Index
+) noexcept
+{
+	assert(u8Index <= 2u);
+
+	return reinterpret_cast<float* const>(this)[u8Index];
+}
+const float& CVector3::operator[](
+	_In_ const std::uint8_t u8Index
+) const noexcept
+{
+	assert(u8Index <= 2u);
+
+	return reinterpret_cast<const float* const>(this)[u8Index];
+}
+
 CVector3 CVector3::operator+(
-	const CVector3& other
+	_In_ const CVector3& other
 ) const noexcept
 {
 	return(
-		this == &other ?
-		*this :
 		CVector3{
 			this->x + other.x,
 			this->y + other.y,
-			this->z + other.z,
+			this->z + other.z
 		}
 	);
 }
 
 CVector3 CVector3::operator-(
-	const CVector3& other
+	_In_ const CVector3& other
 ) const noexcept
 {
 	return(
-		this == &other ?
-		*this :
 		CVector3{
 			this->x - other.x,
 			this->y - other.y,
-			this->z - other.z,
+			this->z - other.z
 		}
 	);
 }
 
 CVector3 CVector3::operator*(
-	const CVector3& other
+	_In_ const CVector3& other
 ) const noexcept
 {
 	return(
-		this == &other ?
-		*this :
 		CVector3{
 			this->x * other.x,
 			this->y * other.y,
-			this->z * other.z,
+			this->z * other.z
 		}
 	);
 }
 
 CVector3 CVector3::operator/(
-	const CVector3& other
+	_In_ const CVector3& other
 ) const noexcept
 {
 	return(
-		this == &other ?
-		*this :
 		CVector3{
 			this->x / other.x,
 			this->y / other.y,
-			this->z / other.z,
+			this->z / other.z
 		}
 	);
 }
 
 CVector3& CVector3::operator+=(
-	const CVector3& other
+	_In_ const CVector3& other
 ) noexcept
 {
 	*this = *this + other;
@@ -108,7 +120,7 @@ CVector3& CVector3::operator+=(
 }
 
 CVector3& CVector3::operator-=(
-	const CVector3& other
+	_In_ const CVector3& other
 ) noexcept
 {
 	*this = *this - other;
@@ -117,7 +129,7 @@ CVector3& CVector3::operator-=(
 }
 
 CVector3& CVector3::operator*= (
-	const CVector3& other
+	_In_ const CVector3& other
 ) noexcept
 {
 	*this = *this * other;
@@ -126,7 +138,7 @@ CVector3& CVector3::operator*= (
 }
 
 CVector3& CVector3::operator/=(
-	const CVector3& other
+	_In_ const CVector3& other
 ) noexcept
 {
 	*this = *this / other;

@@ -14,6 +14,8 @@ import CRenderer;
 // globals namespace
 import globals;
 
+import CTraceRay;
+
 // std::uintptr_t, std::bad_alloc, ...
 #include<iostream>
 
@@ -26,13 +28,13 @@ namespace globals {
     }
 
     namespace modules {
-        static std::uintptr_t ac_client_exe = NULL;
+        const std::uintptr_t ac_client_exe = reinterpret_cast<const std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe")));
     }
 
     static CRenderer* pRenderer = nullptr;
 }
 
-constexpr double PI = static_cast<const double>(3.14159265358979323846);
+static constexpr float PI = 3.14159265358979323846f;
 static const DWORD* dwpJumpBackAddress = nullptr;
 
 static void __declspec(naked) hkHealthOpcode( void ) noexcept {
@@ -66,7 +68,7 @@ static DWORD CALLBACK MainThread(
 
     globals::entity::pEntityList = *reinterpret_cast<const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
     globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
-    globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::CURRENT_PLAYER_IN_GAME);
+    globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::I_CURRENT_PLAYER_IN_GAME);
 
     BYTE* const bypHookAddress = reinterpret_cast<BYTE* const>(globals::modules::ac_client_exe + 0x29D1Fu);
     constexpr const std::uint8_t u8HookLength = 5u;
@@ -126,55 +128,70 @@ static DWORD CALLBACK MainThread(
 
     const CVector3& vec3RefLocalPlayerEyePosition = globals::entity::pLocalPlayer->vec3EyePosition;
 
+    AllocConsole();
+    FILE* pFile = nullptr;
+    freopen_s(
+        &pFile,
+        "CONOUT$",
+        "w",
+        stdout
+    );
+
+    std::cout << std::boolalpha;
+
     while (!GetAsyncKeyState(VK_END)) {
-        if (!globals::entity::pLocalPlayer->uHealth) {
+        if (
+            !globals::entity::pLocalPlayer ||
+            !globals::entity::pLocalPlayer->uHealth
+        )
+        {
             continue;
         }
 
         globals::entity::pLocalPlayer->uAssaultRifleAmmo = 1337u;
 
-        const CPlayer* pTarget = nullptr;
         float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
 
         CVector3 vec3Delta = CVector3{ };
 
         for (std::uint8_t i = 1u; i < *globals::match::ipPlayerInGame; ++i) {
-            const CPlayer& refCurrentPlayer = *(*globals::entity::pEntityList)[i];
+            const CPlayer& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
 
-            if (!refCurrentPlayer.uHealth) {
+            if (
+                !refCurrentPlayer.uHealth ||
+                &refCurrentPlayer == globals::entity::pLocalPlayer ||
+                !refCurrentPlayer.isVisibleTo(vec3RefLocalPlayerEyePosition)
+            )
+            {
                 continue;
             }
 
             vec3Delta = refCurrentPlayer.vec3EyePosition - vec3RefLocalPlayerEyePosition;
 
-            const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();
-
-            if (fCurrentPlayerDistanceToLocalPlayer > fPlayerDistanceToLocalPlayer) {
-                continue;
+            if (
+                const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();
+                fCurrentPlayerDistanceToLocalPlayer < fPlayerDistanceToLocalPlayer
+            )
+            {
+                fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
             }
-
-            fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
-            pTarget = &refCurrentPlayer;
         }
 
-        if (!pTarget) {
+        if (std::numeric_limits<float>::max() == fPlayerDistanceToLocalPlayer) {
             continue;
         }
 
-        constexpr const float fRadiansToDegreesValue = 180.f / static_cast<const float>(::PI);
+        constexpr const float fRadiansToDegreesValue = 180.f / ::PI;
 
-        float newPitch = std::asin(vec3Delta.z / fPlayerDistanceToLocalPlayer) * fRadiansToDegreesValue;
-
-        if (newPitch > 90.f) {
-            newPitch = 90.f;
-        }
-        else if (newPitch < -90.f) {
-            newPitch = -90.f;
-        }
-
-        globals::entity::pLocalPlayer->vec2ViewAngles.y = newPitch;
+        // opp. / adj.
         globals::entity::pLocalPlayer->vec2ViewAngles.x = (-std::atan2(vec3Delta.x, vec3Delta.y) * fRadiansToDegreesValue) + 180.f;
+
+        // opp. / hyp.
+        globals::entity::pLocalPlayer->vec2ViewAngles.y = std::asin(vec3Delta.z / fPlayerDistanceToLocalPlayer) * fRadiansToDegreesValue;
     }
+
+    fclose(pFile);
+    FreeConsole();
 
     if (
         !VirtualProtect(
@@ -215,7 +232,7 @@ BOOL APIENTRY DllMain(
     static const decltype(__TEXT(' '))* pErrorMessage = nullptr;
 
     if (DLL_PROCESS_ATTACH == fdwReason) {
-        if(!(globals::modules::ac_client_exe = reinterpret_cast<const std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe"))))) {
+        if(!globals::modules::ac_client_exe) {
             pErrorMessage = __TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into the wrong process!");
             FreeLibrary(hInstDLL);
             return TRUE;

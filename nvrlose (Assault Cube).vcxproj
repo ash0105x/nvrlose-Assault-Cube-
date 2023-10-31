@@ -94,7 +94,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -113,7 +113,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -135,7 +135,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -154,7 +154,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <LanguageStandard>stdcpp20</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <FloatingPointModel>Fast</FloatingPointModel>
@@ -169,7 +169,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\AssaultCube\weapon.ixx" />
     <ClCompile Include="src\core\CPlayer.ixx" />
+    <ClCompile Include="src\core\CTraceRay.cxx" />
     <ClCompile Include="src\core\CRenderer.cxx" />
     <ClCompile Include="src\core\CRenderer.ixx" />
     <ClCompile Include="src\core\CTrampolineHook32.cxx" />
@@ -182,10 +184,11 @@
     <ClCompile Include="src\core\CWindow.ixx" />
     <ClCompile Include="src\core\dllmain.cpp" />
     <ClCompile Include="src\core\globals.ixx" />
-    <ClCompile Include="src\core\interfaces\gun.ixx" />
+    <ClCompile Include="src\core\AssaultCube\gun.ixx" />
     <ClCompile Include="src\core\offsets.ixx" />
     <ClCompile Include="src\core\utils.cxx" />
     <ClCompile Include="src\core\utils.ixx" />
+    <ClCompile Include="src\core\CTraceRay.ixx" />
     <ClCompile Include="src\external\ImGui\imgui.cpp" />
     <ClCompile Include="src\external\ImGui\imgui_demo.cpp" />
     <ClCompile Include="src\external\ImGui\imgui_draw.cpp" />

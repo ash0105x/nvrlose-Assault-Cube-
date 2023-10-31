@@ -6,10 +6,10 @@ import <sal.h>;
 import <compare>;
 
 class CVector3;
-export typedef CVector3 vec;
-export typedef CVector3 vec_t;
+export typedef CVector3 vec3;
 export typedef CVector3 vec3_t;
 export typedef CVector3 Vector3;
+export typedef CVector3 CVector;
 
 export class CVector3 final {
 public:
@@ -37,35 +37,42 @@ public:
 	) const noexcept = default;
 public:
 	bool isZero(void) const noexcept;
-	CVector3& scale(
+	CVector3 scale(
 		_In_ const float fFactor
-	) noexcept;
+	) const noexcept;
 	float length(void) const noexcept;
 public:
+	float& operator[](
+		_In_ const std::uint8_t u8Index
+	) noexcept;
+	const float& operator[](
+		_In_ const std::uint8_t u8Index
+	) const noexcept;
+public:
 	CVector3 operator+(
-		const CVector3&
+		_In_ const CVector3&
 	) const noexcept;
 	CVector3 operator-(
-		const CVector3&
+		_In_ const CVector3&
 	) const noexcept;
 	CVector3 operator*(
-		const CVector3&
+		_In_ const CVector3&
 	) const noexcept;
 	CVector3 operator/(
-		const CVector3&
+		_In_ const CVector3&
 	) const noexcept;
 public:
 	CVector3& operator+=(
-		const CVector3&
+		_In_ const CVector3&
 	) noexcept;
 	CVector3& operator-=(
-		const CVector3&
+		_In_ const CVector3&
 	) noexcept;
 	CVector3& operator*= (
-		const CVector3&
+		_In_ const CVector3&
 	) noexcept;
 	CVector3& operator/=(
-		const CVector3&
+		_In_ const CVector3&
 	) noexcept;
 public:
 	float x = 0.f;
