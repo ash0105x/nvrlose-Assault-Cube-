@@ -20,9 +20,9 @@ typedef void(__cdecl* const _traceLine_t)(
 	_In_ const float fPositionToX,
 	_In_ const float fPositionToY,
 	_In_ const float fPositionToZ,
-	_In_ const int pPlayer,
-	_In_ const bool bCheckPlayers,
-	_In_ const bool bSomeBoolSetToFalse
+	_In_opt_ const int pPlayer,
+	_In_opt_ const bool bCheckPlayers,
+	_In_opt_ const bool bSomeBoolSetToFalse
 ) noexcept;
 static const _traceLine_t g_pTraceLineFn = reinterpret_cast<const _traceLine_t>(::g_ac_client_exe + offsets::ac_client_exe::function::TRACE_LINE);
 
@@ -45,19 +45,19 @@ static const _isVisible_t g_pIsVisibleFn = reinterpret_cast<const _isVisible_t>(
 * float* vec3Delta@<ebx>	vec3Delta is passed via register ebx
 */
 typedef CROSSHAIR_ID(__cdecl* const _intersect_t)(
-	_In_ const float* const vec3PositionFrom,
-	_In_ const float* const vec3PositionTo
+	_In_ const CVector3 vec3PositionFrom,
+	_In_ const CVector3 vec3PositionTo
 ) noexcept;
 static const _intersect_t g_pIntersectFn = reinterpret_cast<const _intersect_t>(::g_ac_client_exe + offsets::ac_client_exe::function::INTERSECT);
 
 class CPlayer;
 
 CTraceRay CTraceRay::traceLine(
-	const CVector3& vec3PositionFrom,
-	const CVector3& vec3PositionTo,
-	const CPlayer* const pPlayer,
-	const bool bCheckPlayers,
-	const bool bSomeBoolSetToFalse
+	_In_ const CVector3& vec3PositionFrom,
+	_In_ const CVector3& vec3PositionTo,
+	_In_opt_ const CPlayer* const pPlayer,
+	_In_opt_ const bool bCheckPlayers,
+	_In_opt_ const bool bSomeBoolSetToFalse
 ) noexcept
 {
 	CTraceRay traceRay = CTraceRay{ };
@@ -69,14 +69,14 @@ CTraceRay CTraceRay::traceLine(
 
 
 		mov ecx, dword ptr[vec3PositionTo]
-		push[ecx + 0x8]
-		push[ecx + 0x4]
-		push[ecx]
+		push dword ptr[ecx + 0x8]
+		push dword ptr[ecx + 0x4]
+		push dword ptr[ecx]
 
 		mov ecx, dword ptr[vec3PositionFrom]
-		push[ecx + 0x8]
-		push[ecx + 0x4]
-		push[ecx]
+		push dword ptr[ecx + 0x8]
+		push dword ptr[ecx + 0x4]
+		push dword ptr[ecx]
 
 		lea eax, dword ptr[traceRay]
 
@@ -93,15 +93,15 @@ bool CTraceRay::isVisible(
 ) noexcept
 {
 	__asm {
-		mov ecx, dword ptr[vec3PositionTo]
-		push[ecx + 0x8]
-		push[ecx + 0x4]
-		push[ecx]
+		mov eax, dword ptr[vec3PositionTo]
+		push dword ptr[eax + 0x8]
+		push dword ptr[eax + 0x4]
+		push dword ptr[eax]
 
-		mov ecx, dword ptr[vec3PositionFrom]
-		push[ecx + 0x8]
-		push[ecx + 0x4]
-		push[ecx]
+		mov eax, dword ptr[vec3PositionFrom]
+		push dword ptr[eax + 0x8]
+		push dword ptr[eax + 0x4]
+		push dword ptr[eax]
 
 		xor eax, eax
 		xor cl, cl
@@ -113,13 +113,13 @@ bool CTraceRay::isVisible(
 }
 
 CROSSHAIR_ID CTraceRay::intersect(
-	_In_ const CPlayer* const pPlayer,
+	_In_ const CPlayer& refPlayer,
 	_In_ const CVector3& vec3PositionFrom,
 	_In_ const CVector3& vec3PositionTo
 ) noexcept
 {
 	__asm {
-		mov eax, dword ptr[pPlayer]
+		mov eax, dword ptr[refPlayer]
 
 		mov ecx, dword ptr[vec3PositionTo]
 		mov edx, dword ptr[vec3PositionFrom]

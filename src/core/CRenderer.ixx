@@ -3,6 +3,7 @@
 export module CRenderer;
 
 import <sal.h>;
+import <cstdint>;
 
 import CWindow;
 import CTrampolineHook32;
@@ -17,6 +18,20 @@ public:
 private:
 	static void begin( void ) noexcept;
 	static void end( void ) noexcept;
+private:
+	/*
+	* source:
+	*	https://www.libsdl.org/release/SDL-1.2.15/docs/html/sdlwmgrabinput.html
+	*/
+	typedef enum {
+		SDL_GRAB_QUERY,
+		SDL_GRAB_OFF,
+		SDL_GRAB_ON
+	}SDL_GrabMode;
+
+	typedef CRenderer::SDL_GrabMode(__cdecl* _SDL_WM_GrabInput_t)(_In_ const CRenderer::SDL_GrabMode) noexcept;
+	
+	inline static CRenderer::_SDL_WM_GrabInput_t _p_SDL_WM_GrabInput = nullptr;
 private:
 	typedef BOOL(__stdcall* _wglSwapBuffers_t)(_In_ const HDC) noexcept;
 

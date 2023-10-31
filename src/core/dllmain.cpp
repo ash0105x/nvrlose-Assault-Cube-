@@ -19,22 +19,18 @@ import CTraceRay;
 // std::uintptr_t, std::bad_alloc, ...
 #include<iostream>
 
-// std::numeric_limits<const float>::max()
-#include<limits>
-
 namespace globals {
     namespace thread {
         static DWORD dwId = NULL;
     }
 
     namespace modules {
-        const std::uintptr_t ac_client_exe = reinterpret_cast<const std::uintptr_t>(GetModuleHandle(__TEXT("ac_client.exe")));
+        std::uint8_t* const ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
     }
 
     static CRenderer* pRenderer = nullptr;
 }
 
-static constexpr float PI = 3.14159265358979323846f;
 static const DWORD* dwpJumpBackAddress = nullptr;
 
 static void __declspec(naked) hkHealthOpcode( void ) noexcept {
@@ -49,12 +45,12 @@ static void __declspec(naked) hkHealthOpcode( void ) noexcept {
         je onLocalPlayer
 
         mov eax, dword ptr[ebx + 0x4u]
-        sub dword ptr[ebx + 0x4u], eax
+        mov dword ptr[ebx + 0x4u], 0
 
         jmp dword ptr[dwpJumpBackAddress]
     onLocalPlayer:
+        xor eax, eax
         mov dword ptr[ebx + 0x4u], 9999999u
-        xor ecx, ecx
 
         jmp dword ptr[dwpJumpBackAddress]
     }
@@ -111,7 +107,7 @@ static DWORD CALLBACK MainThread(
         &dwTempProtection
     );
 
-    /*try {
+    try {
         globals::pRenderer = new CRenderer{ };
     }
     catch (const std::bad_alloc&) {
@@ -124,74 +120,11 @@ static DWORD CALLBACK MainThread(
         (*globals::function::pointer::pPopupMessage)("Failed to hook function \"wglSwapBuffers\" in module \"OpenGL32.dll\" to make in-game-rendering possible!");
         
         utils::dll::eject(vpInstDLL, ERROR_FUNCTION_FAILED);
-    }*/
-
-    const CVector3& vec3RefLocalPlayerEyePosition = globals::entity::pLocalPlayer->vec3EyePosition;
-
-    AllocConsole();
-    FILE* pFile = nullptr;
-    freopen_s(
-        &pFile,
-        "CONOUT$",
-        "w",
-        stdout
-    );
-
-    std::cout << std::boolalpha;
-
-    while (!GetAsyncKeyState(VK_END)) {
-        if (
-            !globals::entity::pLocalPlayer ||
-            !globals::entity::pLocalPlayer->uHealth
-        )
-        {
-            continue;
-        }
-
-        globals::entity::pLocalPlayer->uAssaultRifleAmmo = 1337u;
-
-        float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
-
-        CVector3 vec3Delta = CVector3{ };
-
-        for (std::uint8_t i = 1u; i < *globals::match::ipPlayerInGame; ++i) {
-            const CPlayer& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
-
-            if (
-                !refCurrentPlayer.uHealth ||
-                &refCurrentPlayer == globals::entity::pLocalPlayer ||
-                !refCurrentPlayer.isVisibleTo(vec3RefLocalPlayerEyePosition)
-            )
-            {
-                continue;
-            }
-
-            vec3Delta = refCurrentPlayer.vec3EyePosition - vec3RefLocalPlayerEyePosition;
-
-            if (
-                const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();
-                fCurrentPlayerDistanceToLocalPlayer < fPlayerDistanceToLocalPlayer
-            )
-            {
-                fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
-            }
-        }
-
-        if (std::numeric_limits<float>::max() == fPlayerDistanceToLocalPlayer) {
-            continue;
-        }
-
-        constexpr const float fRadiansToDegreesValue = 180.f / ::PI;
-
-        // opp. / adj.
-        globals::entity::pLocalPlayer->vec2ViewAngles.x = (-std::atan2(vec3Delta.x, vec3Delta.y) * fRadiansToDegreesValue) + 180.f;
-
-        // opp. / hyp.
-        globals::entity::pLocalPlayer->vec2ViewAngles.y = std::asin(vec3Delta.z / fPlayerDistanceToLocalPlayer) * fRadiansToDegreesValue;
     }
 
-    fclose(pFile);
-    FreeConsole();
+    while (!GetAsyncKeyState(VK_END)) {
+        Sleep(100ul);
+    }
 
     if (
         !VirtualProtect(
@@ -229,11 +162,11 @@ BOOL APIENTRY DllMain(
     _In_ [[maybe_unused]] const void* const lpvReserved
 ) noexcept
 {
-    static const decltype(__TEXT(' '))* pErrorMessage = nullptr;
+    static bool bInvalidModule = false;
 
     if (DLL_PROCESS_ATTACH == fdwReason) {
         if(!globals::modules::ac_client_exe) {
-            pErrorMessage = __TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into the wrong process!");
+            bInvalidModule = true;
             FreeLibrary(hInstDLL);
             return TRUE;
         }
@@ -266,8 +199,8 @@ BOOL APIENTRY DllMain(
         CloseHandle(hThread);
     }
     else if (DLL_PROCESS_DETACH == fdwReason) {
-        if (pErrorMessage) {
-            (*utils::messagebox::error)(pErrorMessage);
+        if (bInvalidModule) {
+            (*utils::messagebox::error)(__TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into the wrong process!"));
             return TRUE;
         }
 
