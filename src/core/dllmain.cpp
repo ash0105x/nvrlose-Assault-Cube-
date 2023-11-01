@@ -14,8 +14,6 @@ import CRenderer;
 // globals namespace
 import globals;
 
-import CTraceRay;
-
 // std::uintptr_t, std::bad_alloc, ...
 #include<iostream>
 
@@ -45,7 +43,7 @@ static void __declspec(naked) hkHealthOpcode( void ) noexcept {
         je onLocalPlayer
 
         mov eax, dword ptr[ebx + 0x4u]
-        mov dword ptr[ebx + 0x4u], 0
+        mov dword ptr[ebx + 0x4u], NULL
 
         jmp dword ptr[dwpJumpBackAddress]
     onLocalPlayer:
@@ -60,7 +58,7 @@ static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
 ) noexcept
 {
-    (*globals::function::pointer::pPopupMessage)("Current thread Id: %d", globals::thread::dwId);
+    (*globals::function::pointer::pPopupMessage)("Current thread Id: 0x%p", globals::thread::dwId);
 
     globals::entity::pEntityList = *reinterpret_cast<const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
     globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
@@ -107,6 +105,15 @@ static DWORD CALLBACK MainThread(
         &dwTempProtection
     );
 
+    /*AllocConsole();
+    FILE* pFile = nullptr;
+    freopen_s(
+        &pFile,
+        "CONOUT$",
+        "w",
+        stdout
+    );*/
+
     try {
         globals::pRenderer = new CRenderer{ };
     }
@@ -125,6 +132,9 @@ static DWORD CALLBACK MainThread(
     while (!GetAsyncKeyState(VK_END)) {
         Sleep(100ul);
     }
+
+    /*fclose(pFile);
+    FreeConsole();*/
 
     if (
         !VirtualProtect(

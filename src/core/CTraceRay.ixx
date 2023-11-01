@@ -14,24 +14,24 @@ export class CPlayer;
 
 export class CTraceRay final {
 public:
-	static CTraceRay traceLine(
-		_In_ const CVector3& vec3PositionFrom,
-		_In_ const CVector3& vec3PositionTo,
-		_In_opt_ const CPlayer* const pPlayer,
+	[[nodiscard]] void traceLine(
+		_In_ const CVector3& vec3PositionStart,
+		_In_ const CVector3& vec3PositionEnd,
+		_In_opt_ const CPlayer* const pTracer,
 		_In_opt_ const bool bCheckPlayers,
-		_In_opt_ const bool bSomeBoolSetToFalse = false
+		_In_opt_ const bool bSkipCheckingSolids
 	) noexcept;
 public:
-	static bool isVisible(
+	[[nodiscard]] static bool entityIsVisible(
 		_In_ const CVector3& vec3PositionFrom,
 		_In_ const CVector3& vec3PositionTo
 	) noexcept;
-	static CROSSHAIR_ID intersect(
+	[[nodiscard]] static CROSSHAIR_ID intersect(
 		_In_ const CPlayer& refPlayer,
 		_In_ const CVector3& vec3PositionFrom,
 		_In_ const CVector3& vec3PositionTo
 	) noexcept;
 public:
 	CVector3 vec3EndTrajectory = CVector3{ };
-	bool bHasCollided = false;
+	bool bCollided = false;
 };

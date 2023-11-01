@@ -33,11 +33,11 @@ private:
 	
 	inline static CRenderer::_SDL_WM_GrabInput_t _p_SDL_WM_GrabInput = nullptr;
 private:
-	typedef BOOL(__stdcall* _wglSwapBuffers_t)(_In_ const HDC) noexcept;
+	typedef BOOL(WINAPI* _wglSwapBuffers_t)(_In_ const HDC) noexcept;
 
 	inline static CRenderer::_wglSwapBuffers_t _p_wglSwapBuffers_gateway = nullptr;
 
-	static BOOL __stdcall hk_wglSwapBuffers(
+	static BOOL WINAPI hk_wglSwapBuffers(
 		_In_ const HDC hDC
 	) noexcept;
 private:

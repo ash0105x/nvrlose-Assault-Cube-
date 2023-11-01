@@ -73,8 +73,7 @@ public:
 		_In_ const CVector3& vec3PlayerPosition
 	) const noexcept
 	{
-		//return CTraceRay::isVisible(this->vec3EyePosition, vec3PlayerPosition);
-		return CTraceRay::isVisible(vec3PlayerPosition, this->vec3EyePosition);
+		return CTraceRay::entityIsVisible(vec3PlayerPosition, this->vec3EyePosition);
 	}
 public:
 	void* const vpVTable = nullptr; // 0x0000

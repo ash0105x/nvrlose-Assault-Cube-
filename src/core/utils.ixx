@@ -51,7 +51,7 @@ export namespace utils {
 #ifdef UNICODE
 		constexpr decltype(auto) error = &utils::messagebox::errorW;
 #else
-		constexpr decltype(auto) error = &utils::messagebox::errorA
+		constexpr decltype(auto) error = &utils::messagebox::errorA;
 #endif // UNICODE
 	}
 	namespace dll {

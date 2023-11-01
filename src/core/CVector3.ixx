@@ -4,6 +4,7 @@ import CVector2;
 
 import <sal.h>;
 import <compare>;
+import <array>;
 
 class CVector3;
 export typedef CVector3 vec3;
@@ -37,10 +38,21 @@ public:
 	) const noexcept = default;
 public:
 	bool isZero(void) const noexcept;
+	float length(void) const noexcept;
+	float distance(
+		_In_ const CVector3& vec3
+	) const noexcept;
 	CVector3 scale(
 		_In_ const float fFactor
 	) const noexcept;
-	float length(void) const noexcept;
+public:
+	// radius = 1
+	static CVector3 sphericalToCartesian(
+		_In_ const CVector2& refVec2
+	) noexcept;
+	static CVector3 sphericalToCartesian(
+		_In_ const CVector3& refVec3
+	) noexcept;
 public:
 	float& operator[](
 		_In_ const std::uint8_t u8Index
@@ -74,6 +86,8 @@ public:
 	CVector3& operator/=(
 		_In_ const CVector3&
 	) noexcept;
+public:
+	inline static constexpr const float fDegreesRadiansConversionValue = static_cast<const float>(180.0 / 3.14159265358979323846); // pi;
 public:
 	float x = 0.f;
 	float y = 0.f;

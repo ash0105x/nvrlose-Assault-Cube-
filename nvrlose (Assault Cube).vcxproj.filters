@@ -96,6 +96,12 @@
     <ClCompile Include="src\core\CTraceRay.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\modules\aimbot.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\modules\aimbot.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\win32api.h">

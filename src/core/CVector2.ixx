@@ -33,6 +33,10 @@ public:
 	) const noexcept = default;
 public:
 	bool isZero(void) const noexcept;
+	float length(void) const noexcept;
+	float distance(
+		_In_ const CVector2& vec2
+	) const noexcept;
 	CVector2 scale(
 		_In_ const float fFactor
 	) const noexcept;

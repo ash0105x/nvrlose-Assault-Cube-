@@ -4,6 +4,8 @@ import <sal.h>;
 
 #include<assert.h>
 
+#include<math.h>
+
 [[nodiscard]] CVector2::CVector2(
 	_In_ const float x,
 	_In_ const float y
@@ -13,6 +15,22 @@ import <sal.h>;
 
 bool CVector2::isZero(void) const noexcept {
 	return this->x == 0.f && this->y == 0.f;
+}
+
+float CVector2::length(void) const noexcept {
+	return (
+		sqrtf(
+			(this->x * this->x) +
+			(this->y * this->y)
+		)
+	);
+}
+
+float CVector2::distance(
+	_In_ const CVector2& vec2
+) const noexcept
+{
+	return (vec2 - *this).length();
 }
 
 CVector2 CVector2::scale(

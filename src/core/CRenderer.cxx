@@ -1,14 +1,19 @@
 import CRenderer;
 
+#include"win32api.h"
+
 import CWindow;
 import CTrampolineHook32;
 import utils;
 import globals;
+import aimbot;
+
+import CVector2;
 import CVector3;
 
-#include"win32api.h"
-
 import <array>;
+
+#include<iostream>
 
 #include<tuple>
 
@@ -51,13 +56,13 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
         )
     };
 
-    typedef enum : std::uint8_t {
-        INDEX_MODULE_NAME = NULL,
-        INDEX_FUNCTION_NAME,
-        INDEX_OUT_FUNCTION_ADDRESS
-    }INDEX;
-
     for (std::tuple<const decltype(__TEXT(' '))* const, const char* const, void** const>& refFunctionToRetrieve : arrFunctionsToRetrieve) {
+        typedef enum : std::uint8_t {
+            INDEX_MODULE_NAME = NULL,
+            INDEX_FUNCTION_NAME,
+            INDEX_OUT_FUNCTION_ADDRESS
+        }INDEX;
+
         if (
             const HMODULE hModule = GetModuleHandle(std::get<INDEX::INDEX_MODULE_NAME>(refFunctionToRetrieve));
             hModule &&
@@ -138,9 +143,9 @@ LRESULT CALLBACK CRenderer::hk_WndProc(
         menu::bOpen ^= true;
     }
 
-    if (!menu::bOpen) {
-        (*CRenderer::_p_SDL_WM_GrabInput)(CRenderer::SDL_GrabMode::SDL_GRAB_OFF);
+    (*CRenderer::_p_SDL_WM_GrabInput)(static_cast<const CRenderer::SDL_GrabMode>(static_cast<const std::uint8_t>(menu::bOpen) + 1u));
 
+    if (!menu::bOpen) {
         return(
             CallWindowProc(
                 CRenderer::_AssaultCubeWindow.getOriginalWndProc(),
@@ -152,8 +157,6 @@ LRESULT CALLBACK CRenderer::hk_WndProc(
         );
     }
 
-    (*CRenderer::_p_SDL_WM_GrabInput)(CRenderer::SDL_GrabMode::SDL_GRAB_ON);
-
     ImGui_ImplWin32_WndProcHandler(
         hWnd,
         msg,
@@ -164,7 +167,7 @@ LRESULT CALLBACK CRenderer::hk_WndProc(
     return TRUE;
 }
 
-BOOL __stdcall CRenderer::hk_wglSwapBuffers(
+BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 	_In_ const HDC hDC
 ) noexcept
 {
@@ -181,56 +184,57 @@ BOOL __stdcall CRenderer::hk_wglSwapBuffers(
             return bOnFailure();
         }
 
-        [[maybe_unused]] ImGuiIO& refIO = ImGui::GetIO();
+        [[maybe_unused]] const ImGuiIO& refIO = ImGui::GetIO();
 
         if (!ImGui_ImplWin32_Init(static_cast<const HWND>(CRenderer::_AssaultCubeWindow))) {
             return bOnFailure();
         }
 
-        CRenderer::_bImGuiWin32Initialized = true;
-
-        if (!ImGui_ImplOpenGL2_Init()) {
+        if (
+            CRenderer::_bImGuiWin32Initialized = true;
+            !ImGui_ImplOpenGL2_Init()
+        )
+        {
             return bOnFailure();
         }
 
         CRenderer::_bImGuiOpenGLInitialized = true;
 
-        return CRenderer::_AssaultCubeWindow.changeWndProc(&CRenderer::hk_WndProc);
+        return(
+            CRenderer::_AssaultCubeWindow.changeWndProc(&CRenderer::hk_WndProc) ?
+            true :
+            bOnFailure()
+        );
     }();
 
     if (!bInitImGuiOnce) {
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
-    if (menu::bOpen) {
-        CRenderer::begin();
+    CRenderer::begin();
+    {
+        if (menu::bOpen) {
+            constexpr const char cstrClientName[] = (
+                "nvrlose client"
+    #ifdef _DEBUG
+                " (dev build)"
+    #endif // _DEBUG
+            );
 
-        constexpr const char cstrClientName[] = (
-            "nvrlose client"
-#ifdef _DEBUG
-            " (dev build)"
-#endif // _DEBUG
-        );
-
-        if (
-            ImGui::Begin(
-                cstrClientName,
-                nullptr,
-                NULL
+            if (
+                ImGui::Begin(
+                    cstrClientName,
+                    nullptr,
+                    NULL
+                )
             )
-        )
-        {
-            ImGui::Text("Hello World!");
-
-            static bool bIsChecked = false;
-
-            ImGui::Checkbox("Am i checked?", &bIsChecked);
-
+            {
+                ImGui::Checkbox("Aimbot", &modules::aimbot::bToggle);
+            }
+            ImGui::End();
         }
-        ImGui::End();
-
-        CRenderer::end();
     }
+    CRenderer::end();
 
     if (
         !globals::entity::pLocalPlayer ||
@@ -240,48 +244,17 @@ BOOL __stdcall CRenderer::hk_wglSwapBuffers(
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
+    /*globals::entity::pLocalPlayer->bIsShooting = CTraceRay::entityIsVisible(
+        globals::entity::pLocalPlayer->vec3EyePosition,
+        globals::entity::pLocalPlayer->vec3EyePosition +
+        CVector3::sphericalToCartesian(globals::entity::pLocalPlayer->vec2ViewAngles).scale(100.f)
+    );*/
+
     globals::entity::pLocalPlayer->uAssaultRifleAmmo = 1337u;
 
-    float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
-
-    static const CVector3& vec3RefLocalPlayerEyePosition = globals::entity::pLocalPlayer->vec3EyePosition;
-
-    CVector3 vec3Delta = CVector3{ };
-
-    for (std::uint8_t i = 1u; i < *globals::match::ipPlayerInGame; ++i) {
-        const CPlayer& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
-
-        if (
-            !refCurrentPlayer.uHealth ||
-            &refCurrentPlayer == globals::entity::pLocalPlayer ||
-            !refCurrentPlayer.isVisibleTo(vec3RefLocalPlayerEyePosition)
-        )
-        {
-            continue;
-        }
-
-        vec3Delta = refCurrentPlayer.vec3EyePosition - vec3RefLocalPlayerEyePosition;
-
-        if (
-            const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();
-            fCurrentPlayerDistanceToLocalPlayer < fPlayerDistanceToLocalPlayer
-        )
-        {
-            fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
-        }
+    if (modules::aimbot::bToggle) {
+        modules::aimbot::onToggle();
     }
-
-    if (std::numeric_limits<float>::max() == fPlayerDistanceToLocalPlayer) {
-        return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
-    }
-
-    constexpr const float fRadiansToDegreesValue = static_cast<const float>(180.0 / M_PI);
-
-    // opp. / adj.
-    globals::entity::pLocalPlayer->vec2ViewAngles.x = (-atan2f(vec3Delta.x, vec3Delta.y) * fRadiansToDegreesValue) + 180.f;
-
-    // opp. / hyp.
-    globals::entity::pLocalPlayer->vec2ViewAngles.y = asinf(vec3Delta.z / fPlayerDistanceToLocalPlayer) * fRadiansToDegreesValue;
 
 	return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
 }
