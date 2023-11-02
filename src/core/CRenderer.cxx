@@ -7,6 +7,7 @@ import CTrampolineHook32;
 import utils;
 import globals;
 import aimbot;
+import CTraceRay;
 
 import CVector2;
 import CVector3;
@@ -43,36 +44,57 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
     constexpr const std::uint8_t TOTAL_FUNCTIONS_TO_RETRIEVE = 2u;
 
-    std::array<std::tuple<const decltype(__TEXT(' '))* const, const char* const, void** const>, TOTAL_FUNCTIONS_TO_RETRIEVE> arrFunctionsToRetrieve = std::array<std::tuple<const decltype(__TEXT(' '))* const, const char* const, void** const>, TOTAL_FUNCTIONS_TO_RETRIEVE> {
-        std::make_tuple<const decltype(__TEXT(' '))* const, const char* const, void** const>(
+    const std::array<const std::tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>, TOTAL_FUNCTIONS_TO_RETRIEVE> arrFunctionsToRetrieve = std::array<const std::tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>, TOTAL_FUNCTIONS_TO_RETRIEVE> {
+        std::make_tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>(
             __TEXT("SDL.dll"),
             "SDL_WM_GrabInput",
             reinterpret_cast<void** const>(&CRenderer::_p_SDL_WM_GrabInput)
         ),
-        std::make_tuple<const decltype(__TEXT(' '))* const, const char* const, void** const>(
+        std::make_tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>(
             __TEXT("opengl32.dll"),
             "wglSwapBuffers",
             reinterpret_cast<void** const>(&CRenderer::_p_wglSwapBuffers_gateway)
         )
     };
 
-    for (std::tuple<const decltype(__TEXT(' '))* const, const char* const, void** const>& refFunctionToRetrieve : arrFunctionsToRetrieve) {
+    for (const std::tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>& refFunctionToRetrieve : arrFunctionsToRetrieve) {
         typedef enum : std::uint8_t {
             INDEX_MODULE_NAME = NULL,
             INDEX_FUNCTION_NAME,
             INDEX_OUT_FUNCTION_ADDRESS
         }INDEX;
 
-        if (
-            const HMODULE hModule = GetModuleHandle(std::get<INDEX::INDEX_MODULE_NAME>(refFunctionToRetrieve));
-            hModule &&
-            (*std::get<INDEX::INDEX_OUT_FUNCTION_ADDRESS>(refFunctionToRetrieve) = GetProcAddress(hModule, std::get<INDEX::INDEX_FUNCTION_NAME>(refFunctionToRetrieve)))
-        )
-        {
-            continue;
+        const decltype(__TEXT('\0'))* const& pRefModuleName = std::get<INDEX::INDEX_MODULE_NAME>(refFunctionToRetrieve);
+
+        const HMODULE hModule = GetModuleHandle(pRefModuleName);
+
+        constexpr const bool bModuleNameIsCharString = std::_Is_character<std::remove_const<std::remove_pointer<std::remove_reference<decltype(pRefModuleName)>::type>::type>::type>::value;
+
+        constexpr const char* const cstrModuleNameFormat = bModuleNameIsCharString ? "%s -> 0x%p" : "%ls -> 0x%p";
+
+        (*globals::function::pointer::pPopupMessage)(
+            cstrModuleNameFormat, pRefModuleName, hModule
+        );
+
+        if (!hModule) {
+            return;
         }
 
-        return;
+        const char* const& cstrRefFunctionName = std::get<INDEX::INDEX_FUNCTION_NAME>(refFunctionToRetrieve);
+
+        void*& vpRefFunctionAddress = *std::get<INDEX::INDEX_OUT_FUNCTION_ADDRESS>(refFunctionToRetrieve);
+
+        vpRefFunctionAddress = GetProcAddress(hModule, cstrRefFunctionName);
+
+        constexpr const char* const cstrFunctionNameFormat = bModuleNameIsCharString ? "%s - %s -> 0x%p" : "%ls - %s -> 0x%p";
+
+        (*globals::function::pointer::pPopupMessage)(
+            cstrFunctionNameFormat, pRefModuleName, cstrRefFunctionName, vpRefFunctionAddress
+        );
+
+        if (!vpRefFunctionAddress) {
+            return;
+        }
     }
 
 	constexpr const std::uint8_t WGL_SWAP_BUFFERS_HOOK_LENGTH = 5u;
@@ -212,45 +234,54 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     }
 
     CRenderer::begin();
-    {
-        if (menu::bOpen) {
-            constexpr const char cstrClientName[] = (
-                "nvrlose client"
-    #ifdef _DEBUG
-                " (dev build)"
-    #endif // _DEBUG
-            );
 
-            if (
-                ImGui::Begin(
-                    cstrClientName,
-                    nullptr,
-                    NULL
-                )
+    if (menu::bOpen) {
+        constexpr const char cstrClientName[] = (
+            "nvrlose client"
+#ifdef _DEBUG
+            " (dev build)"
+#endif // _DEBUG
+        );
+
+        if (
+            ImGui::Begin(
+                cstrClientName,
+                nullptr,
+                NULL
             )
-            {
-                ImGui::Checkbox("Aimbot", &modules::aimbot::bToggle);
-            }
-            ImGui::End();
+        )
+        {
+            ImGui::Checkbox("Aimbot", &modules::aimbot::bToggle);
         }
+        ImGui::End();
     }
+    
     CRenderer::end();
 
     if (
         !globals::entity::pLocalPlayer ||
-        !globals::entity::pLocalPlayer->uHealth
+        !globals::entity::pLocalPlayer->iHealth
     )
     {
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
-    /*globals::entity::pLocalPlayer->bIsShooting = CTraceRay::entityIsVisible(
+    /*CTraceRay traceResult = CTraceRay{ };
+
+    traceResult.traceLine(
         globals::entity::pLocalPlayer->vec3EyePosition,
         globals::entity::pLocalPlayer->vec3EyePosition +
-        CVector3::sphericalToCartesian(globals::entity::pLocalPlayer->vec2ViewAngles).scale(100.f)
-    );*/
+        CVector3::sphericalToCartesian(globals::entity::pLocalPlayer->vec2ViewAngles).scale(100.f),
+        globals::entity::pLocalPlayer,
+        false,
+        false
+    );
 
-    globals::entity::pLocalPlayer->uAssaultRifleAmmo = 1337u;
+    globals::entity::pLocalPlayer->bIsShooting = !traceResult.bCollided;*/
+
+    if (globals::entity::pLocalPlayer->pCurrentWeapon) {
+        *globals::entity::pLocalPlayer->pCurrentWeapon->upAmmo = 1337;
+    }
 
     if (modules::aimbot::bToggle) {
         modules::aimbot::onToggle();

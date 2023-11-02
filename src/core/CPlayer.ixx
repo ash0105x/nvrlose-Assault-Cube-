@@ -4,6 +4,7 @@ import <cstdint>;
 
 import offsets;
 import CTraceRay;
+import weapon;
 
 export import CVector2;
 export import CVector3;
@@ -16,14 +17,6 @@ export enum class FORWARD_STATE : std::uint8_t {
 export enum class SIDE_STATE : std::uint8_t {
 	SIDE_STATE_LEFT = 0x1u,
 	SIDE_STATE_RIGHT = 0xFFu
-};
-
-export enum class WEAPON : std::uint8_t {
-	WEAPON_CARBINE = 2u,
-	WEAPON_SHOTGUN = 3u,
-	WEAPON_SUBMACHINE_GUN = 4u,
-	WEAPON_SNIPER = 5u,
-	WEAPON_ASSAULT_RIFLE = 6u,
 };
 
 export enum class RVSF_PLAYER_SKIN : std::uint8_t {
@@ -59,6 +52,15 @@ export enum class PLAYER_STATE : std::uint8_t {
 	PLAYER_STATE_GHOST = 0x4u
 };
 
+export enum class LIFE_STATE : std::int32_t {
+	LIFE_STATE_DEAD = -2,
+	LIFE_STATE_ALIVE = -4
+};
+
+export typedef bool TEAM_ID;
+export constexpr const TEAM_ID TEAM_ID_CLA = false;
+export constexpr const TEAM_ID TEAM_ID_RVSF = true;
+
 typedef float DUCK_STATE;
 export constexpr const DUCK_STATE DUCK_STATE_IN_UN_DUCKING_STATE = .600f;
 export constexpr const DUCK_STATE DUCK_STATE_IN_DUCKING_STATE = -::DUCK_STATE_IN_UN_DUCKING_STATE;
@@ -76,111 +78,164 @@ public:
 		return CTraceRay::entityIsVisible(vec3PlayerPosition, this->vec3EyePosition);
 	}
 public:
-	void* const vpVTable = nullptr; // 0x0000
-	CVector3 vec3EyePosition = CVector3{ }; //0x0004
+	void* vpVTable; // 0x0000
+	CVector3 vec3EyePosition; //0x0004
 private:
-	const char pad_0010[24] = { }; //0x0010
+	const char pad_0010[24]; //0x0010
 public:
-	CVector3 vec3Velocity = CVector3{ }; //0x0028
-	CVector3 vec3FeetPosition = CVector3{ }; //0x0034
-	CVector2 vec2ViewAngles = CVector2{ }; //0x0040
+	CVector3 vec3Velocity; //0x0028
+	CVector3 vec3FeetPosition; //0x0034
+	CVector2 vec2ViewAngles; //0x0040
 private:
-	const char pad_0048[20] = { }; //0x0048
+	const char pad_0048[12]; //0x0048
 public:
-	float fCameraHeight = 0.f; //0x005C
-	float fMaxCameraHeight = 0.f; //0x0060
+	std::uint16_t uFallingSpeed; //0x0054
 private:
-	const char pad_0064[12] = { }; //0x0064
+	const char pad_0056[6]; //0x0056
 public:
-	bool bIsStandingStillOrIsNotShooting = false; //0x0070
+	float fCameraHeight; //0x005C
+	float fMaxCameraHeight; //0x0060
 private:
-	const char pad_0071[15] = { }; //0x0071
+	const char pad_0064[4]; //0x0064
+	const std::uint8_t N00000066; //0x0068
 public:
-	FORWARD_STATE forwardWalkingState = static_cast<const FORWARD_STATE>(NULL); //0x0080
-	SIDE_STATE sidewalkingState = static_cast<const SIDE_STATE>(NULL); //0x0081
-	PLAYER_STATE playerState = static_cast<const PLAYER_STATE>(NULL); //0x0082
+	bool bIsOnGround; //0x0069
 private:
-	const char pad_0083[9] = { }; //0x0083
+	const char pad_006A[1]; //0x006A
 public:
-	bool bIsWalkingLeftSide = false; //0x008C
-	bool bIsWalkingRightSide = false; //0x008D
-	bool bIsWalkingForward = false; //0x008E
-	bool bIsWalkingBackward = false; //0x008F
+	bool bIsFlyingUpwards; //0x006B
+	bool bIsDucking; //0x006C
+	bool bIsDuckingWhileJumping; //0x006D
+	bool bIsFlyingDownwards; //0x006E
 private:
-	const char pad_0090[104] = { }; //0x0090
+	const char pad_006F[1]; //0x006F
 public:
-	std::uint32_t uHealth = NULL; //0x00F8
+	bool bIsStandingStillOrIsNotShooting; //0x0070
+	bool bIsScoping; //0x0071
 private:
-	const char pad_00FC[8] = { }; //0x00FC
+	const char pad_0072[14]; //0x0072
 public:
-	WEAPON selectedWeaponIndex = static_cast<const WEAPON>(NULL); //0x0104
+	std::int16_t uWalkingState; //0x0080
+	PLAYER_STATE uPlayerState; //0x0082
 private:
-	const char pad_0105[15] = { }; //0x0105
+	const char pad_0083[9]; //0x0083
 public:
-	std::uint32_t uSecondaryReservedAmmo = NULL; //0x0114
-	std::uint32_t uCarbineReservedAmmo = NULL; //0x0118
-	std::uint32_t uShotgunReservedAmmo = NULL; //0x011C
-	std::uint32_t uSubmachineGunReservedAmmo = NULL; //0x0120
-	std::uint32_t uSniperReservedAmmo = NULL; //0x0124
-	std::uint32_t uAssaultRifleReservedAmmo = NULL; //0x0128
+	bool bIsWalkingLeftSide; //0x008C
+	bool bIsWalkingRightSide; //0x008D
+	bool bIsWalkingForward; //0x008E
+	bool bIsWalkingBackward; //0x008F
 private:
-	const char pad_012C[16] = { }; //0x012C
+	const char pad_0090[105 - 4]; //0x0090
 public:
-	std::uint32_t uSecondaryWeaponAmmo = NULL; //0x013C
-	std::uint32_t uCarbineAmmo = NULL; //0x0140
-	std::uint32_t uShotgunAmmo = NULL; //0x0144
-	std::uint32_t uSubmachineGunAmmo = NULL; //0x0148
-	std::uint32_t uSniperAmmo = NULL; //0x014C
-	std::uint32_t uAssaultRifleAmmo = NULL; //0x0150
+	std::int32_t iHealth; //0x00F8
 private:
-	const char pad_0154[4] = { }; //0x0154
+	const char pad_00FC[8]; //0x00FC
 public:
-	std::uint32_t uGrenades = NULL; //0x0158
+	WEAPON_ID uSelectedWeaponID; //0x0104
 private:
-	const char pad_015C[4] = { }; //0x015C
+	const char pad_0105[15]; //0x0105
 public:
-	std::uint32_t uKnifeDelay = NULL; //0x0160
-	std::uint32_t uSecondaryWeaponDelay = NULL; //0x0164
-	std::uint32_t uCarbineDelay = NULL; //0x0168
-	std::uint32_t uShotgunDelay = NULL; //0x016C
-	std::uint32_t uSubmachineGunDelay = NULL; //0x0170
-	std::uint32_t uSniperDelay = NULL; //0x0174
-	std::uint32_t uAssaultRifleDelay = NULL; //0x0178
+	std::uint32_t uSecondaryWeaponChamber; //0x0114
+	std::uint32_t uCarbineChamber; //0x0118
+	std::uint32_t uShotgunChamber; //0x011C
+	std::uint32_t uSubmachineGunChamber; //0x0120
+	std::uint32_t uSniperChamber; //0x0124
+	std::uint32_t uAssaultRifleChamber; //0x0128
 private:
-	const char pad_017C[4] = { }; //0x017C
+	const char pad_012C[16]; //0x012C
 public:
-	std::uint32_t uGrenadeDelay = NULL; //0x0180
+	std::uint32_t uSecondaryWeaponAmmo; //0x013C
+	std::uint32_t uCarbineAmmo; //0x0140
+	std::uint32_t uShotgunAmmo; //0x0144
+	std::uint32_t uSubmachineGunAmmo; //0x0148
+	std::uint32_t uSniperAmmo; //0x014C
+	std::uint32_t uAssaultRifleAmmo; //0x0150
 private:
-	const char pad_0184[4] = { }; //0x0184
+	const char pad_0154[4]; //0x0154
 public:
-	std::uint32_t uKnifeUsedInCurrentMatch = NULL; //0x0188
-	std::uint32_t uSecondaryWeaponShotsFiredInCurrentMatch = NULL; //0x018C
-	std::uint32_t uCarbineShotsFiredInCurrentMatch = NULL; //0x0190
-	std::uint32_t uShotgunShotsFiredInCurrentMatch = NULL; //0x0194
-	std::uint32_t uSubmachineGunShotsFiredInCurrentMatch = NULL; //0x0198
-	std::uint32_t uSniperShotsFiredInCurrentMatch = NULL; //0x019C
-	std::uint32_t uAssaultRifleShotsFiredInCurrentMatch = NULL; //0x01A0
+	std::uint32_t uGrenades; //0x0158
 private:
-	const char pad_01A4[4] = { }; //0x01A4
+	const char pad_015C[4]; //0x015C
 public:
-	std::uint32_t uGrenadesThrownInCurrentMatch = NULL; //0x01A8
+	std::uint32_t uKnifeDelay; //0x0160
+	std::uint32_t uSecondaryWeaponDelay; //0x0164
+	std::uint32_t uCarbineDelay; //0x0168
+	std::uint32_t uShotgunDelay; //0x016C
+	std::uint32_t uSubmachineGunDelay; //0x0170
+	std::uint32_t uSniperDelay; //0x0174
+	std::uint32_t uAssaultRifleDelay; //0x0178
 private:
-	const char pad_01AC[48] = { }; //0x01AC
+	const char pad_017C[4]; //0x017C
 public:
-	CLA_PLAYER_SKIN CLA_PlayerSkinIndex = static_cast<const CLA_PLAYER_SKIN>(NULL); //0x01DC
+	std::uint32_t uGrenadeDelay; //0x0180
 private:
-	const char pad_01DD[3] = { }; //0x01DD
+	const char pad_0184[4]; //0x0184
 public:
-	RVSF_PLAYER_SKIN RVSF_PlayerSkinIndex = static_cast<const RVSF_PLAYER_SKIN>(NULL); //0x01E0
+	std::uint32_t uKnifeUsedInCurrentMatch; //0x0188
+	std::uint32_t uSecondaryWeaponShotsFiredInCurrentMatch; //0x018C
+	std::uint32_t uCarbineShotsFiredInCurrentMatch; //0x0190
+	std::uint32_t uShotgunShotsFiredInCurrentMatch; //0x0194
+	std::uint32_t uSubmachineGunShotsFiredInCurrentMatch; //0x0198
+	std::uint32_t uSniperShotsFiredInCurrentMatch; //0x019C
+	std::uint32_t uAssaultRifleShotsFiredInCurrentMatch; //0x01A0
 private:
-	const char pad_01E1[3] = { }; //0x01E1
+	const char pad_01A4[4]; //0x01A4
 public:
-	std::uint8_t u8Index = NULL; //0x01E4
+	std::uint32_t uGrenadesThrownInCurrentMatch; //0x01A8
 private:
-	const char pad_01E5[63] = { }; //0x01E5
+	const char pad_01AC[48]; //0x01AC
 public:
-	bool bIsShooting = false; //0x224
-	char cstrNickname[::MAX_PLAYER_NICKNAME_CHARACTER_COUNT] = { }; //0x0225
-}; //Size: 0x235
-//static_assert(sizeof(CPlayer) == 0x235);
-constexpr const auto etwas = sizeof(CPlayer);
+	CLA_PLAYER_SKIN CLA_PlayerSkinIndex; //0x01DC
+private:
+	const char pad_01DD[3]; //0x01DD
+public:
+	RVSF_PLAYER_SKIN RVSF_PlayerSkinIndex; //0x01E0
+private:
+	const char pad_01E1[3]; //0x01E1
+public:
+	std::uint8_t uIndex; //0x01E4
+private:
+	const char pad_01E5[19]; //0x01E5
+public:
+	std::uint32_t uConfirmedDeaths; //0x01F8
+	std::int32_t iFrags; //0x01FC
+private:
+	const char pad_0200[4]; //0x0200
+public:
+	std::uint32_t uDeaths; //0x0204
+private:
+	const char pad_0208[4]; //0x0208
+public:
+	std::uint32_t uTeamKills; //0x020C
+private:
+	const char pad_0210[20]; //0x0210
+public:
+	bool bIsShooting; //0x0224
+	char cstrNickname[16]; //0x0225
+private:
+	const char pad_0235[247]; //0x0235
+public:
+	TEAM_ID uTeamID; //0x032C
+private:
+	const char pad_032D[15]; //0x032D
+public:
+	LIFE_STATE iLifeState; //0x033C
+private:
+	const char pad_0340[4]; //0x0340
+	const void* const N0000016B; //0x0344
+	const char pad_0348[40]; //0x0348
+public:
+	weapon* pPreviousWeapon; //0x0370
+	weapon* pCurrentWeapon2; //0x0374 // The same as CPlayer::pCurrentWeapon
+	weapon* pCurrentWeapon; //0x0378
+	weapon* pConfirmedSelectedWeapon; //0x037C
+	weapon* pSelectedWeapon; //0x0380
+	weapon* pLastShotFiredWeapon; //0x0384
+private:
+	const char pad_0388[148]; //0x0388
+	const void* const N000001A1; //0x041C
+	const char pad_0424[4]; //0x0424
+	const CPlayer* const N000001A4; //0x0428
+	const char pad_042C[1548]; //0x042C
+}; //Size: 0x0A38
+//static_assert(sizeof(CPlayer) == 0xA38);

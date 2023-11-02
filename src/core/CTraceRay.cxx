@@ -1,122 +1,88 @@
 import CTraceRay;
 
 import CVector3;
-import globals;
-import offsets;
 import CPlayer;
-
-#include"win32api.h"
 
 import <cstdint>;
 
-std::uint8_t* const g_ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
-
-/*
-* int ray@<eax>				ray is passed via register eax
-*/
-typedef void(__cdecl* const _traceLine_t)(
-	_In_ const float fPositionFromX,
-	_In_ const float fPositionFromY,
-	_In_ const float fPositionFromZ,
-	_In_ const float fPositionToX,
-	_In_ const float fPositionToY,
-	_In_ const float fPositionToZ,
-	_In_opt_ const int pPlayer,
-	_In_opt_ const bool bCheckPlayers,
-	_In_opt_ const bool bSomeBoolSetToFalse
-) noexcept;
-static const _traceLine_t g_pTraceLineFn = reinterpret_cast<const _traceLine_t>(::g_ac_client_exe + offsets::ac_client_exe::function::TRACE_LINE);
-
-/*
-* bool bSkipCheckingSolids@<cl>	bSkipCheckingSolids is passed via register cl
-* CPlayer* pPlayer@<eax>		pPlayer is passed via register eax
-*/
-typedef bool(__cdecl* const _isVisible_t)(
-	_In_ const float fPositionFromX,
-	_In_ const float fPositionFromY,
-	_In_ const float fPositionFromZ,
-	_In_ const float fPositionToX,
-	_In_ const float fPositionToY,
-	_In_ const float fPositionToZ
-) noexcept;
-static const _isVisible_t g_pIsVisibleFn = reinterpret_cast<const _isVisible_t>(::g_ac_client_exe + offsets::ac_client_exe::function::IS_VISIBLE);
-
-/*
-* float* pPlayer@<eax>		pPlayer is passed via register eax
-* float* vec3Delta@<ebx>	vec3Delta is passed via register ebx
-*/
-typedef CROSSHAIR_ID(__cdecl* const _intersect_t)(
-	_In_ const CVector3 vec3PositionFrom,
-	_In_ const CVector3 vec3PositionTo
-) noexcept;
-static const _intersect_t g_pIntersectFn = reinterpret_cast<const _intersect_t>(::g_ac_client_exe + offsets::ac_client_exe::function::INTERSECT);
-
-[[nodiscard]] void CTraceRay::traceLine(
-	_In_ const CVector3& vec3PositionStart,
-	_In_ const CVector3& vec3PositionEnd,
-	_In_opt_ const CPlayer* const pTracer,
-	_In_opt_ const bool bCheckPlayers,
-	_In_opt_ const bool bSkipCheckingSolids
+void CTraceRay::traceLine(
+	/*CTraceRay traceResult@<eax>*/ // Result
+	_In_ const CVector3& vec3PositionStart, // Starting position of the ray
+	_In_ const CVector3& vec3PositionEnd, // Ending position of the ray
+	_In_opt_ const CPlayer* const pTracer, // The player who is tracing the line
+	_In_opt_ const bool bCheckPlayers, // Whether to check for players along the line
+	_In_opt_ const bool bSkipCheckingSolids // Whether to skip checking for solids along the line
 ) noexcept
 {
 	__asm {
+		// Pushing parameters onto the stack from right to left as per __cdecl calling convention
 		push dword ptr[bSkipCheckingSolids]
 		push dword ptr[bCheckPlayers]
 		push dword ptr[pTracer]
+
+		// Accessing vec3PositionEnd components and pushing them onto the stack
 		mov eax, dword ptr[vec3PositionEnd]
-		push dword ptr[eax + 0x8u]
-		push dword ptr[eax + 0x4u]
-		push dword ptr[eax]
+		push dword ptr[eax + 0x8u] // Pushing vec3PositionEnd.z onto the stack
+		push dword ptr[eax + 0x4u] // Pushing vec3PositionEnd.y onto the stack
+		push dword ptr[eax] // Pushing vec3PositionEnd.x onto the stack
+
+		// Accessing vec3PositionStart components and pushing them onto the stack
 		mov eax, dword ptr[vec3PositionStart]
-		push dword ptr[eax + 0x8u]
-		push dword ptr[eax + 0x4u]
-		push dword ptr[eax]
-		push ecx
-		mov ecx, dword ptr[this]
-		lea eax, dword ptr[ecx]
-		pop ecx
-		call g_pTraceLineFn
-		xor eax, eax
-		add esp, 0x24u
+		push dword ptr[eax + 0x8u] // Pushing vec3PositionStart.z onto the stack
+		push dword ptr[eax + 0x4u] // Pushing vec3PositionStart.y onto the stack
+		push dword ptr[eax] // Pushing vec3PositionStart.x onto the stack
+
+		mov eax, dword ptr[this] // The CTraceRay instance (traceResult) is passed via eax
+
+		call dword ptr[CTraceRay::_pTraceLineFn] // Calling AssaultCubes's TraceLine function
+
+		xor eax, eax // Clearing eax register as this is a void function
+
+		add esp, 0x24u // Cleaning up the stack by adding 0x24 (36 in decimal) to esp register
 	}
 }
 
 [[nodiscard]] bool CTraceRay::entityIsVisible(
+	/*bool bSkipCheckingSolids@<cl>,
+	CPlayer* pPlayer@<eax>*/
 	_In_ const CVector3& vec3PositionFrom,
 	_In_ const CVector3& vec3PositionTo
 ) noexcept
 {
 	__asm {
+		// Pushing parameters onto the stack from right to left as per __cdecl calling convention
+		// Accessing vec3PositionEnd components and pushing them onto the stack
 		mov eax, dword ptr [vec3PositionTo]
-		push dword ptr[eax + 0x8u]
-		push dword ptr[eax + 0x4u]
-		push dword ptr[eax]
+		push dword ptr[eax + 0x8u] // Pushing vec3PositionTo.z onto the stack
+		push dword ptr[eax + 0x4u] // Pushing vec3PositionTo.y onto the stack
+		push dword ptr[eax] // Pushing vec3PositionTo.x onto the stack
 
+		// Accessing vec3PositionStart components and pushing them onto the stack
 		mov eax, dword ptr [vec3PositionFrom]
-		push dword ptr[eax + 0x8u]
-		push dword ptr[eax + 0x4u]
-		push dword ptr[eax]
+		push dword ptr[eax + 0x8u] // Pushing vec3PositionFrom.z onto the stack
+		push dword ptr[eax + 0x4u] // Pushing vec3PositionFrom.y onto the stack
+		push dword ptr[eax] // Pushing vec3PositionFrom.x onto the stack
 
-		xor eax, eax
-		xor cl, cl
+		xor eax, eax // Setting pPlayer to nullptr
+		xor cl, cl // Setting bSkipCheckingSolids to false
 
-		call dword ptr[g_pIsVisibleFn]
+		call dword ptr[CTraceRay::_pIsVisibleFn] // Calling AssaultCubes's entityIsVisible function
 
-		add esp, 0x18u
+		add esp, 0x18u // Cleaning up the stack by adding 0x18 (24 in decimal) to esp register
 	}
 }
 
 [[nodiscard]] CROSSHAIR_ID CTraceRay::intersect(
+	/*CPlayer& refPlayer@<eax>,
+	CVector3 vec3Delta@<ebx>*/
 	_In_ const CPlayer& refPlayer,
 	_In_ const CVector3& vec3PositionFrom,
 	_In_ const CVector3& vec3PositionTo
 ) noexcept
 {
-	CVector3& pvec3Coordinates = *reinterpret_cast<CVector3* const>(::g_ac_client_exe + 0x10A400u);
+	const CVector3 vec3PreviousCoordinates = *CTraceRay::vec3pCoordinates;
 
-	const CVector3 vec3PreviousCoordinates = pvec3Coordinates;
-
-	pvec3Coordinates = refPlayer.vec3EyePosition;
+	*CTraceRay::vec3pCoordinates = refPlayer.vec3EyePosition;
 
 	__asm {
 		mov eax, dword ptr[refPlayer]
@@ -129,10 +95,10 @@ static const _intersect_t g_pIntersectFn = reinterpret_cast<const _intersect_t>(
 
 		xor ebx, ebx
 
-		call dword ptr[g_pIntersectFn]
+		call dword ptr[CTraceRay::_pIntersectFn]
 
 		add esp, 0x08u
 	}
 
-	pvec3Coordinates = vec3PreviousCoordinates;
+	*CTraceRay::vec3pCoordinates = vec3PreviousCoordinates;
 }

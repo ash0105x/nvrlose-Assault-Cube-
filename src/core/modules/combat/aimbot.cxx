@@ -1,6 +1,6 @@
 import aimbot;
 
-#include"../win32api.h"
+#include"../../win32api.h"
 
 #include <limits>
 
@@ -8,27 +8,22 @@ import CVector3;
 import globals;
 import CTraceRay;
 
-
-import offsets;
-
 void modules::aimbot::onToggle(void) noexcept {
     float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
-
-    static const CVector3& vec3RefLocalPlayerEyePosition = globals::entity::pLocalPlayer->vec3EyePosition;
 
     CVector3 vec3Delta = CVector3{ };
 
     for (std::uint8_t i = 1u; i < *globals::match::ipPlayerInGame; ++i) {
         const CPlayer& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
 
-        if (!refCurrentPlayer.uHealth) {
+        if (refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID || !refCurrentPlayer.iHealth) {
             continue;
         }
 
         CTraceRay traceResult = CTraceRay{ };
 
         traceResult.traceLine(
-            vec3RefLocalPlayerEyePosition,
+            globals::entity::pLocalPlayer->vec3EyePosition,
             refCurrentPlayer.vec3EyePosition,
             globals::entity::pLocalPlayer,
             false,
@@ -39,15 +34,7 @@ void modules::aimbot::onToggle(void) noexcept {
             continue;
         }
 
-        /*if (
-            !refCurrentPlayer.uHealth ||
-            !refCurrentPlayer.isVisibleTo(vec3RefLocalPlayerEyePosition)
-        )
-        {
-            continue;
-        }*/
-
-        vec3Delta = refCurrentPlayer.vec3EyePosition - vec3RefLocalPlayerEyePosition;
+        vec3Delta = refCurrentPlayer.vec3EyePosition - globals::entity::pLocalPlayer->vec3EyePosition;
 
         if (
             const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();

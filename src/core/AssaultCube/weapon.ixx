@@ -8,10 +8,18 @@ export class CPlayer;
 
 export import gun;
 
-export class weapon {
+export enum class WEAPON_ID : std::uint8_t {
+	WEAPON_ID_CARBINE = 2u,
+	WEAPON_ID_SHOTGUN = 3u,
+	WEAPON_ID_SUBMACHINE_GUN = 4u,
+	WEAPON_ID_SNIPER = 5u,
+	WEAPON_ID_ASSAULT_RIFLE = 6u,
+};
+
+export class weapon final {
 public:
 	gun* const vpVTable = nullptr; //0x0000
-	std::uint8_t uUniqueID = 0u; //0x0004
+	WEAPON_ID uUniqueID = static_cast<const WEAPON_ID>(NULL); //0x0004
 private:
 	const char pad_0005[3u] = { }; //0x0005
 public:
@@ -20,7 +28,7 @@ public:
 	std::uint32_t* const upReservedAmmo = nullptr; //0x0010
 	std::uint32_t* const upAmmo = nullptr; //0x0014
 	std::uint32_t* const upFirerate = nullptr; //0x0018
-	std::uint32_t uShotsFired = 0u; //0x001C
-	std::uint32_t uReloadTime = 0u; //0x0020
+	std::uint32_t uShotsFired = NULL; //0x001C
+	std::uint32_t uReloadTime = NULL; //0x0020
 }; //Size: 0x0024
 static_assert(sizeof(weapon) == 0x24u);

@@ -16,6 +16,8 @@ import globals;
 
 // std::uintptr_t, std::bad_alloc, ...
 #include<iostream>
+// assert
+#include<assert.h>
 
 namespace globals {
     namespace thread {
@@ -64,10 +66,18 @@ static DWORD CALLBACK MainThread(
     globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
     globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::I_CURRENT_PLAYER_IN_GAME);
 
-    BYTE* const bypHookAddress = reinterpret_cast<BYTE* const>(globals::modules::ac_client_exe + 0x29D1Fu);
-    constexpr const std::uint8_t u8HookLength = 5u;
+    const auto exit = [&vpInstDLL](_In_z_ const char* const cstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void {
+        assert(cstrMessage);
+        
+        (*globals::function::pointer::pPopupMessage)(cstrMessage);
 
-    std::array<BYTE, u8HookLength> byArrStolenBytes = std::array<BYTE, u8HookLength>{ };
+        utils::dll::eject(vpInstDLL, dwExitCode);
+    };
+
+    BYTE* const bypHookAddress = reinterpret_cast<BYTE* const>(globals::modules::ac_client_exe + 0x29D1Fu);
+    constexpr const std::uint8_t HOOK_LENGTH = 5u;
+
+    std::array<BYTE, HOOK_LENGTH> byArrStolenBytes = std::array<BYTE, HOOK_LENGTH>{ };
 
     memcpy_s(
         byArrStolenBytes.data(),
@@ -76,7 +86,7 @@ static DWORD CALLBACK MainThread(
         byArrStolenBytes.size()
     );
 
-    ::dwpJumpBackAddress = reinterpret_cast<const DWORD*>(bypHookAddress + u8HookLength);
+    ::dwpJumpBackAddress = reinterpret_cast<const DWORD*>(bypHookAddress + HOOK_LENGTH);
 
     const DWORD dwRelativeOffset = reinterpret_cast<const std::uintptr_t>(&::hkHealthOpcode) - reinterpret_cast<const std::uintptr_t>(bypHookAddress) - 5u;
     
@@ -84,14 +94,13 @@ static DWORD CALLBACK MainThread(
     if (
         !VirtualProtect(
             bypHookAddress,
-            u8HookLength,
+            HOOK_LENGTH,
             PAGE_EXECUTE_READWRITE,
             &dwPreviousProtection
         )
     )
     {
-        (*globals::function::pointer::pPopupMessage)("Failed to get permission to change the ingame code");
-        utils::dll::eject(vpInstDLL, ERROR_ACCESS_DENIED);
+        exit("Failed to get permission to change the ingame code", ERROR_ACCESS_DENIED);
     }
 
     bypHookAddress[NULL] = 0xE9u;
@@ -100,53 +109,36 @@ static DWORD CALLBACK MainThread(
     DWORD dwTempProtection = NULL;
     VirtualProtect(
         bypHookAddress,
-        u8HookLength,
+        HOOK_LENGTH,
         dwPreviousProtection,
         &dwTempProtection
     );
-
-    /*AllocConsole();
-    FILE* pFile = nullptr;
-    freopen_s(
-        &pFile,
-        "CONOUT$",
-        "w",
-        stdout
-    );*/
 
     try {
         globals::pRenderer = new CRenderer{ };
     }
     catch (const std::bad_alloc&) {
-        (*globals::function::pointer::pPopupMessage)("Failed to allocate enough memory to hold the \"CRenderer\"-class!");
-
-        utils::dll::eject(vpInstDLL, ERROR_NOT_ENOUGH_MEMORY);
+        exit("Failed to allocate enough memory to hold the \"CRenderer\"-class!", ERROR_NOT_ENOUGH_MEMORY);
     }
 
     if (!globals::pRenderer->ok()) {
-        (*globals::function::pointer::pPopupMessage)("Failed to hook function \"wglSwapBuffers\" in module \"OpenGL32.dll\" to make in-game-rendering possible!");
-        
-        utils::dll::eject(vpInstDLL, ERROR_FUNCTION_FAILED);
+        exit("Failed to hook function \"wglSwapBuffers\" in module \"OpenGL32.dll\" to make in-game-rendering possible!", ERROR_FUNCTION_FAILED);
     }
 
     while (!GetAsyncKeyState(VK_END)) {
         Sleep(100ul);
     }
 
-    /*fclose(pFile);
-    FreeConsole();*/
-
     if (
         !VirtualProtect(
             bypHookAddress,
-            u8HookLength,
+            HOOK_LENGTH,
             PAGE_EXECUTE_READWRITE,
             &dwPreviousProtection
         )
     )
     {
-        (*globals::function::pointer::pPopupMessage)("Failed to get permission to change the ingame code");
-        utils::dll::eject(vpInstDLL, ERROR_ACCESS_DENIED);
+        exit("Failed to get permission to change the ingame code", ERROR_ACCESS_DENIED);
     }
     memcpy_s(
         bypHookAddress,
@@ -156,7 +148,7 @@ static DWORD CALLBACK MainThread(
     );
     VirtualProtect(
         bypHookAddress,
-        u8HookLength,
+        HOOK_LENGTH,
         dwPreviousProtection,
         &dwTempProtection
     );

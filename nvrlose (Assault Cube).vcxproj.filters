@@ -96,10 +96,10 @@
     <ClCompile Include="src\core\CTraceRay.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\modules\aimbot.ixx">
+    <ClCompile Include="src\core\modules\combat\aimbot.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\modules\aimbot.cxx">
+    <ClCompile Include="src\core\modules\combat\aimbot.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
