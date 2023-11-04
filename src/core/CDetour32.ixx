@@ -1,34 +1,33 @@
-export module CTrampolineHook32;
+export module CDetour32;
 
 import <cstdint>;
-import <sal.h>;
 
 import IHook;
 
-export class CTrampolineHook32 final : public IHook {
+export class CDetour32 final : public IHook {
 public:
-	[[nodiscard]] explicit CTrampolineHook32(
+	[[nodiscard]] explicit CDetour32(
 		[[maybe_unused]] _In_ std::nullptr_t = nullptr
 	) noexcept;
-	[[nodiscard]] explicit CTrampolineHook32(
+	[[nodiscard]] explicit CDetour32(
 		_In_ void* const vpHookAddress,
 		_In_ const size_t hookLength
 	) noexcept;
-	CTrampolineHook32(
-		const CTrampolineHook32&
+	CDetour32(
+		const CDetour32&
 	) = delete;
-	CTrampolineHook32(
-		_Inout_ CTrampolineHook32&&
+	CDetour32(
+		_Inout_ CDetour32&&
 	) noexcept;
 public:
-	CTrampolineHook32& operator=(
-		const CTrampolineHook32&
+	CDetour32& operator=(
+		const CDetour32&
 	) = delete;
-	CTrampolineHook32& operator=(
-		_Inout_ CTrampolineHook32&&
+	CDetour32& operator=(
+		_Inout_ CDetour32&&
 	) noexcept;
 public:
-	virtual ~CTrampolineHook32( void ) noexcept;
+	virtual ~CDetour32(void) noexcept;
 public:
 	[[nodiscard]]
 	_Check_return_
@@ -38,7 +37,7 @@ public:
 	) noexcept override;
 
 	_Success_(return == true)
-	virtual bool operator~( void ) noexcept override;
+	virtual bool operator~(void) noexcept override;
 public:
 	[[nodiscard]]
 	_Check_return_
@@ -49,8 +48,8 @@ public:
 
 	_Success_(return == true)
 	virtual bool detach(void) noexcept override;
-private:
+public:
 	std::uint8_t* m_bypHookAddress = nullptr;
 	size_t m_HookLength = NULL;
-	std::uint8_t* m_bypGateway = nullptr;
+	std::uint8_t* m_byArrStolenBytes = nullptr;
 };

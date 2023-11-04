@@ -24,6 +24,10 @@ export namespace globals {
 		const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
 	}
 
+	namespace modules {
+		std::uint8_t* const ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
+	}
+
 	namespace match {
 		const std::uint32_t* ipPlayerInGame = nullptr;
 	}

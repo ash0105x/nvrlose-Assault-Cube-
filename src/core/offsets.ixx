@@ -1,7 +1,8 @@
 export module offsets;
 
-typedef int ptrdiff_t;
-typedef unsigned int uintptr_t;
+import <cstdint>;
+
+import <stddef.h>;
 
 export namespace offsets {
     namespace ac_client_exe {
@@ -40,5 +41,6 @@ export namespace offsets {
         constexpr const ptrdiff_t I_FIRING_SPEED = 0x0178u;
         constexpr const ptrdiff_t I_SHOTS_FIRED = 0x01A0u;
         constexpr const ptrdiff_t CSTR_NICKNAME = 0x225u;
+        constexpr const ptrdiff_t U_TEAM_ID = 0x032Cu;
     }
 }

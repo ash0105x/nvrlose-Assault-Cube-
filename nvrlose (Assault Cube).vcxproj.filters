@@ -102,6 +102,18 @@
     <ClCompile Include="src\core\modules\combat\aimbot.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\CDetour32.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\CDetour32.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\IHook.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\CMidHook32.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\win32api.h">

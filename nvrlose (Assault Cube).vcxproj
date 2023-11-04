@@ -170,6 +170,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\core\AssaultCube\weapon.ixx" />
+    <ClCompile Include="src\core\CDetour32.cxx" />
+    <ClCompile Include="src\core\CDetour32.ixx" />
+    <ClCompile Include="src\core\CMidHook32.ixx" />
     <ClCompile Include="src\core\CPlayer.ixx" />
     <ClCompile Include="src\core\CTraceRay.cxx" />
     <ClCompile Include="src\core\CRenderer.cxx" />
@@ -185,6 +188,7 @@
     <ClCompile Include="src\core\dllmain.cpp" />
     <ClCompile Include="src\core\globals.ixx" />
     <ClCompile Include="src\core\AssaultCube\gun.ixx" />
+    <ClCompile Include="src\core\IHook.ixx" />
     <ClCompile Include="src\core\modules\combat\aimbot.cxx" />
     <ClCompile Include="src\core\modules\combat\aimbot.ixx" />
     <ClCompile Include="src\core\offsets.ixx" />

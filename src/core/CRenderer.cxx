@@ -12,6 +12,8 @@ import CTraceRay;
 import CVector2;
 import CVector3;
 
+import offsets;
+
 import <array>;
 
 #include<iostream>
@@ -160,9 +162,13 @@ LRESULT CALLBACK CRenderer::hk_WndProc(
     _In_ const LPARAM lParam
 ) noexcept
 {
-
-    if (GetAsyncKeyState(VK_INSERT) & 0x01) {
-        menu::bOpen ^= true;
+    if (msg == WM_KEYDOWN) {
+        if (wParam == VK_INSERT) {
+            menu::bOpen ^= true;
+        }
+        else if (wParam == VK_ESCAPE) {
+            menu::bOpen = false;
+        }
     }
 
     (*CRenderer::_p_SDL_WM_GrabInput)(static_cast<const CRenderer::SDL_GrabMode>(static_cast<const std::uint8_t>(menu::bOpen) + 1u));
@@ -233,9 +239,27 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
+    globals::entity::pEntityList = *reinterpret_cast<const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
+
     CRenderer::begin();
 
     if (menu::bOpen) {
+        static const bool bCenterWindowOnce = [](void) noexcept -> bool {
+            GLint viewPort[4u];
+            glGetIntegerv(GL_VIEWPORT, viewPort);
+
+            const ImVec2 vec2WindowSize = ImGui::GetWindowSize();
+
+            ImGui::SetNextWindowPos(
+                ImVec2{
+                    static_cast<const float>((viewPort[2u] - static_cast<const std::uint32_t>(vec2WindowSize.x)) / 2u),
+                    static_cast<const float>((viewPort[3u] - static_cast<const std::uint32_t>(vec2WindowSize.y)) / 2u)
+                }
+            );
+
+            return false;
+        }();
+
         constexpr const char cstrClientName[] = (
             "nvrlose client"
 #ifdef _DEBUG
@@ -251,7 +275,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             )
         )
         {
-            ImGui::Checkbox("Aimbot", &modules::aimbot::bToggle);
+            ImGui::Checkbox("Aimbot", &modules::combat::aimbot::bToggle);
         }
         ImGui::End();
     }
@@ -279,12 +303,8 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     globals::entity::pLocalPlayer->bIsShooting = !traceResult.bCollided;*/
 
-    if (globals::entity::pLocalPlayer->pCurrentWeapon) {
-        *globals::entity::pLocalPlayer->pCurrentWeapon->upAmmo = 1337;
-    }
-
-    if (modules::aimbot::bToggle) {
-        modules::aimbot::onToggle();
+    if (modules::combat::aimbot::bToggle) {
+        modules::combat::aimbot::onToggle();
     }
 
 	return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);

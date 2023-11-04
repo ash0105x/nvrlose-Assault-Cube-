@@ -14,6 +14,12 @@ import CRenderer;
 // globals namespace
 import globals;
 
+import aimbot;
+
+import CMidHook32;
+import weapon;
+import CDetour32;
+
 // std::uintptr_t, std::bad_alloc, ...
 #include<iostream>
 // assert
@@ -24,37 +30,71 @@ namespace globals {
         static DWORD dwId = NULL;
     }
 
-    namespace modules {
-        std::uint8_t* const ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
-    }
-
     static CRenderer* pRenderer = nullptr;
 }
 
-static const DWORD* dwpJumpBackAddress = nullptr;
+static void hkHealthDecreaseOpcode(void) noexcept {
+    CPlayer* pPlayer = nullptr;
 
-static void __declspec(naked) hkHealthOpcode( void ) noexcept {
     __asm {
-        mov eax, dword ptr[globals::modules::ac_client_exe]
-        add eax, dword ptr[offsets::ac_client_exe::pointer::LOCAL_PLAYER]
-        mov eax, dword ptr[eax]
-        add eax, 0xF4u
-
-        cmp ebx, eax
-
-        je onLocalPlayer
-
-        mov eax, dword ptr[ebx + 0x4u]
-        mov dword ptr[ebx + 0x4u], NULL
-
-        jmp dword ptr[dwpJumpBackAddress]
-    onLocalPlayer:
-        xor eax, eax
-        mov dword ptr[ebx + 0x4u], 9999999u
-
-        jmp dword ptr[dwpJumpBackAddress]
+        sub ebx, 0xF4u
+        mov dword ptr[pPlayer], ebx
     }
+
+    pPlayer->iHealth = pPlayer->uTeamID == globals::entity::pLocalPlayer->uTeamID ? 9999999u : NULL;
 }
+
+static void hkAmmoDecreaseOpcode(void) noexcept {
+    weapon* pWeapon = nullptr;
+
+    __asm {
+        mov dword ptr[pWeapon], esi
+    }
+
+    if (pWeapon->pOwner->uTeamID == globals::entity::pLocalPlayer->uTeamID) {
+        *pWeapon->upAmmo = 9999999u;
+        *pWeapon->upReservedAmmo = 9999999u;
+        return;
+    }
+    *pWeapon->upAmmo = NULL;
+    *pWeapon->upReservedAmmo = NULL;
+}
+
+//static const void* vpAmmoJumpBackAddress = nullptr;
+//
+//static void __declspec(naked) hkAmmoDecreaseOpcode(void) noexcept {
+//    __asm {
+//        // esi holds our weapon object
+//        // ebx is free to use
+//        // Setting ebx to our localPlayer pointer
+//        mov ebx, dword ptr[globals::modules::ac_client_exe]
+//        add ebx, dword ptr[offsets::ac_client_exe::pointer::LOCAL_PLAYER]
+//        mov ebx, dword ptr[ebx]
+//
+//        // Reading the localPlayer's teamID and setting it to ebx
+//        mov ebx, dword ptr[ebx + 0x032C]
+//        push esi
+//        mov esi, dword ptr[esi + 0x0008]
+//
+//        cmp dword ptr[esi + 0x032C], ebx
+//        pop esi
+//        push esi
+//        mov esi, dword ptr[esi + 0x0010]
+//        je onTeammate
+//
+//        mov dword ptr[esi], 0
+//        pop esi
+//        mov esi, dword ptr[esi + 0x0014]
+//        mov dword ptr[esi], 0
+//        jmp dword ptr[vpAmmoJumpBackAddress]
+//    onTeammate:
+//        mov dword ptr[esi], 999999
+//        pop esi
+//        mov esi, dword ptr[esi + 0x0014]
+//        mov dword ptr[esi], 999999
+//        jmp dword ptr[vpAmmoJumpBackAddress]
+//    }
+//}
 
 static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
@@ -62,7 +102,6 @@ static DWORD CALLBACK MainThread(
 {
     (*globals::function::pointer::pPopupMessage)("Current thread Id: 0x%p", globals::thread::dwId);
 
-    globals::entity::pEntityList = *reinterpret_cast<const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
     globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
     globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::I_CURRENT_PLAYER_IN_GAME);
 
@@ -74,45 +113,23 @@ static DWORD CALLBACK MainThread(
         utils::dll::eject(vpInstDLL, dwExitCode);
     };
 
-    BYTE* const bypHookAddress = reinterpret_cast<BYTE* const>(globals::modules::ac_client_exe + 0x29D1Fu);
-    constexpr const std::uint8_t HOOK_LENGTH = 5u;
+    CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_DISCARD> healthOpcodeHook = CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_DISCARD>{
+        globals::modules::ac_client_exe + 0x29D1Fu,
+        5u
+    };
 
-    std::array<BYTE, HOOK_LENGTH> byArrStolenBytes = std::array<BYTE, HOOK_LENGTH>{ };
-
-    memcpy_s(
-        byArrStolenBytes.data(),
-        byArrStolenBytes.size(),
-        bypHookAddress,
-        byArrStolenBytes.size()
-    );
-
-    ::dwpJumpBackAddress = reinterpret_cast<const DWORD*>(bypHookAddress + HOOK_LENGTH);
-
-    const DWORD dwRelativeOffset = reinterpret_cast<const std::uintptr_t>(&::hkHealthOpcode) - reinterpret_cast<const std::uintptr_t>(bypHookAddress) - 5u;
-    
-    DWORD dwPreviousProtection = NULL;
-    if (
-        !VirtualProtect(
-            bypHookAddress,
-            HOOK_LENGTH,
-            PAGE_EXECUTE_READWRITE,
-            &dwPreviousProtection
-        )
-    )
-    {
-        exit("Failed to get permission to change the ingame code", ERROR_ACCESS_DENIED);
+    if (!healthOpcodeHook.attach(&::hkHealthDecreaseOpcode)) {
+        exit("Failed to enable godmode cheat", ERROR_FUNCTION_FAILED);
     }
 
-    bypHookAddress[NULL] = 0xE9u;
-    *reinterpret_cast<DWORD* const>(bypHookAddress + 1u) = dwRelativeOffset;
+    CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST> ammoDecreaseHook = CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>{
+        globals::modules::ac_client_exe + 0x637E6u,
+        5u
+    };
 
-    DWORD dwTempProtection = NULL;
-    VirtualProtect(
-        bypHookAddress,
-        HOOK_LENGTH,
-        dwPreviousProtection,
-        &dwTempProtection
-    );
+    if (!ammoDecreaseHook.attach(&::hkAmmoDecreaseOpcode)) {
+        exit("Failed to enable unlimited ammo cheat", ERROR_FUNCTION_FAILED);
+    }
 
     try {
         globals::pRenderer = new CRenderer{ };
@@ -129,29 +146,13 @@ static DWORD CALLBACK MainThread(
         Sleep(100ul);
     }
 
-    if (
-        !VirtualProtect(
-            bypHookAddress,
-            HOOK_LENGTH,
-            PAGE_EXECUTE_READWRITE,
-            &dwPreviousProtection
-        )
-    )
-    {
-        exit("Failed to get permission to change the ingame code", ERROR_ACCESS_DENIED);
+    if (!ammoDecreaseHook.detach()) {
+        exit("Failed to disable unlimited ammo cheat", ERROR_FUNCTION_FAILED);
     }
-    memcpy_s(
-        bypHookAddress,
-        byArrStolenBytes.size(),
-        byArrStolenBytes.data(),
-        byArrStolenBytes.size()
-    );
-    VirtualProtect(
-        bypHookAddress,
-        HOOK_LENGTH,
-        dwPreviousProtection,
-        &dwTempProtection
-    );
+
+    if (!healthOpcodeHook.detach()) {
+        exit("Failed to detach the godmode hook", ERROR_FUNCTION_FAILED);
+    }
 
     utils::dll::eject(vpInstDLL, ERROR_SUCCESS);
     return TRUE;
