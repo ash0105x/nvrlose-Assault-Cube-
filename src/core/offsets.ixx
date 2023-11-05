@@ -12,6 +12,7 @@ export namespace offsets {
             constexpr const ptrdiff_t LOCAL_PLAYER = offsets::ac_client_exe::pointer::ENTITY_LIST - sizeof(void*);
             constexpr const ptrdiff_t I_CURRENT_PLAYER_IN_GAME = 0x10f500u;
             constexpr const ptrdiff_t I_GAME_TIME = 0x109EACu;
+            constexpr const ptrdiff_t MODEL_VIEW_PROJECTION_MATRIX = 0x00101AE8u;
         }
 
         // typedef type_t({callingConvention}* func_t)({parameterList});

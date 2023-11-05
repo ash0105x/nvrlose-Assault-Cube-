@@ -5,6 +5,9 @@ import <vector>;
 import <cstdint>;
 import <array>;
 
+import CVector2;
+import CVector3;
+
 export namespace utils {
 	namespace memory {
 		[[nodiscard]]
@@ -55,6 +58,13 @@ export namespace utils {
 		) noexcept;
 	}
 
+	namespace math {
+		bool worldToScreen(
+			_In_ const CVector3& vec3RefWorld,
+			_Out_ CVector2& vecRef2Screen
+		) noexcept;
+	}
+
 	namespace messagebox {
 		void errorA(
 			_In_z_ const char* const cstrBody
@@ -63,7 +73,7 @@ export namespace utils {
 		void errorW(
 			_In_z_ const wchar_t* const wcstrBody
 		) noexcept;
-
+		
 #ifdef UNICODE
 		constexpr decltype(auto) error = &utils::messagebox::errorW;
 #else

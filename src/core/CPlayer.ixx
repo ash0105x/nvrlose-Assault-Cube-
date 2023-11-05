@@ -84,7 +84,7 @@ private:
 	const char pad_0010[24]; //0x0010
 public:
 	CVector3 vec3Velocity; //0x0028
-	CVector3 vec3FeetPosition; //0x0034
+	CVector3 vec3Origin; //0x0034
 	CVector2 vec2ViewAngles; //0x0040
 private:
 	const char pad_0048[12]; //0x0048

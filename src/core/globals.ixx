@@ -8,6 +8,13 @@ import <array>;
 import CPlayer;
 import offsets;
 
+export typedef enum : std::uint8_t {
+	VIEW_PORT_ELEMENT_X = NULL,
+	VIEW_PORT_ELEMENT_Y,
+	VIEW_PORT_ELEMENT_WIDTH,
+	VIEW_PORT_ELEMENT_HEIGHT = 3u
+}VIEW_PORT_ELEMENT;
+
 export namespace globals {
 	namespace function {
 		namespace definition {
@@ -22,13 +29,19 @@ export namespace globals {
 		CPlayer* pLocalPlayer = nullptr;
 		constexpr const std::uint8_t MAX_ENTITIES = 32u;
 		const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
+		constexpr const std::uint8_t FIRST_ENTITY_INDEX = 1u;
 	}
 
 	namespace modules {
 		std::uint8_t* const ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
 	}
 
+	namespace screen {
+		std::int32_t viewPort[4u];
+		float* pModelViewProjectionMatrix = nullptr;
+	}
+
 	namespace match {
-		const std::uint32_t* ipPlayerInGame = nullptr;
+		const std::uint8_t* bypPlayerInGame = nullptr;
 	}
 }

@@ -14,8 +14,6 @@ import CRenderer;
 // globals namespace
 import globals;
 
-import aimbot;
-
 import CMidHook32;
 import weapon;
 import CDetour32;
@@ -44,57 +42,58 @@ static void hkHealthDecreaseOpcode(void) noexcept {
     pPlayer->iHealth = pPlayer->uTeamID == globals::entity::pLocalPlayer->uTeamID ? 9999999u : NULL;
 }
 
-static void hkAmmoDecreaseOpcode(void) noexcept {
-    weapon* pWeapon = nullptr;
-
-    __asm {
-        mov dword ptr[pWeapon], esi
-    }
-
-    if (pWeapon->pOwner->uTeamID == globals::entity::pLocalPlayer->uTeamID) {
-        *pWeapon->upAmmo = 9999999u;
-        *pWeapon->upReservedAmmo = 9999999u;
-        return;
-    }
-    *pWeapon->upAmmo = NULL;
-    *pWeapon->upReservedAmmo = NULL;
-}
-
-//static const void* vpAmmoJumpBackAddress = nullptr;
+//static void hkAmmoDecreaseOpcode(void) noexcept {
+//    weapon* pWeapon = nullptr;
 //
-//static void __declspec(naked) hkAmmoDecreaseOpcode(void) noexcept {
 //    __asm {
-//        // esi holds our weapon object
-//        // ebx is free to use
-//        // Setting ebx to our localPlayer pointer
-//        mov ebx, dword ptr[globals::modules::ac_client_exe]
-//        add ebx, dword ptr[offsets::ac_client_exe::pointer::LOCAL_PLAYER]
-//        mov ebx, dword ptr[ebx]
-//
-//        // Reading the localPlayer's teamID and setting it to ebx
-//        mov ebx, dword ptr[ebx + 0x032C]
-//        push esi
-//        mov esi, dword ptr[esi + 0x0008]
-//
-//        cmp dword ptr[esi + 0x032C], ebx
-//        pop esi
-//        push esi
-//        mov esi, dword ptr[esi + 0x0010]
-//        je onTeammate
-//
-//        mov dword ptr[esi], 0
-//        pop esi
-//        mov esi, dword ptr[esi + 0x0014]
-//        mov dword ptr[esi], 0
-//        jmp dword ptr[vpAmmoJumpBackAddress]
-//    onTeammate:
-//        mov dword ptr[esi], 999999
-//        pop esi
-//        mov esi, dword ptr[esi + 0x0014]
-//        mov dword ptr[esi], 999999
-//        jmp dword ptr[vpAmmoJumpBackAddress]
+//        mov dword ptr[pWeapon], esi
 //    }
+//
+//    if (pWeapon->pOwner->uTeamID == globals::entity::pLocalPlayer->uTeamID) {
+//        *pWeapon->upAmmo = 9999999u;
+//        *pWeapon->upReservedAmmo = 9999999u;
+//        return;
+//    }
+//
+//    *pWeapon->upAmmo = NULL;
+//    *pWeapon->upReservedAmmo = NULL;
 //}
+
+static const void* vpAmmoJumpBackAddress = nullptr;
+
+static void __declspec(naked) hkAmmoDecreaseOpcode(void) noexcept {
+    __asm {
+        // esi holds our weapon object
+        // ebx is free to use
+        // Setting ebx to our localPlayer pointer
+        mov ebx, dword ptr[globals::modules::ac_client_exe]
+        add ebx, dword ptr[offsets::ac_client_exe::pointer::LOCAL_PLAYER]
+        mov ebx, dword ptr[ebx]
+
+        // Reading the localPlayer's teamID and setting it to ebx
+        mov ebx, dword ptr[ebx + 0x032C]
+        push esi
+        mov esi, dword ptr[esi + 0x0008]
+
+        cmp dword ptr[esi + 0x032C], ebx
+        pop esi
+        push esi
+        mov esi, dword ptr[esi + 0x0010]
+        je onTeammate
+
+        mov dword ptr[esi], 0
+        pop esi
+        mov esi, dword ptr[esi + 0x0014]
+        mov dword ptr[esi], 0
+        jmp dword ptr[vpAmmoJumpBackAddress]
+    onTeammate:
+        mov dword ptr[esi], 999999
+        pop esi
+        mov esi, dword ptr[esi + 0x0014]
+        mov dword ptr[esi], 999999
+        jmp dword ptr[vpAmmoJumpBackAddress]
+    }
+}
 
 static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
@@ -103,7 +102,8 @@ static DWORD CALLBACK MainThread(
     (*globals::function::pointer::pPopupMessage)("Current thread Id: 0x%p", globals::thread::dwId);
 
     globals::entity::pLocalPlayer = *reinterpret_cast<CPlayer* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
-    globals::match::ipPlayerInGame = reinterpret_cast<const std::uint32_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::I_CURRENT_PLAYER_IN_GAME);
+    globals::match::bypPlayerInGame = reinterpret_cast<const std::uint8_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::I_CURRENT_PLAYER_IN_GAME);
+    globals::screen::pModelViewProjectionMatrix = reinterpret_cast<float* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::MODEL_VIEW_PROJECTION_MATRIX);
 
     const auto exit = [&vpInstDLL](_In_z_ const char* const cstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void {
         assert(cstrMessage);
@@ -122,12 +122,12 @@ static DWORD CALLBACK MainThread(
         exit("Failed to enable godmode cheat", ERROR_FUNCTION_FAILED);
     }
 
-    CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST> ammoDecreaseHook = CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>{
+    CDetour32 ammoDecreaseHook = CDetour32{
         globals::modules::ac_client_exe + 0x637E6u,
         5u
     };
 
-    if (!ammoDecreaseHook.attach(&::hkAmmoDecreaseOpcode)) {
+    if (!(::vpAmmoJumpBackAddress = ammoDecreaseHook.attach(&::hkAmmoDecreaseOpcode))) {
         exit("Failed to enable unlimited ammo cheat", ERROR_FUNCTION_FAILED);
     }
 

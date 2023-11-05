@@ -96,12 +96,6 @@
     <ClCompile Include="src\core\CTraceRay.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\modules\combat\aimbot.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\core\modules\combat\aimbot.cxx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\core\CDetour32.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -112,6 +106,27 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\CMidHook32.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\modules\visuals\snaplines.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\modules\visuals\snaplines.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\modules\visuals\ESP.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\modules\visuals\ESP.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\CMenu.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\gl.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\gl.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

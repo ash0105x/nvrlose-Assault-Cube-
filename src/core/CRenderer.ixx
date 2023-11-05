@@ -8,6 +8,9 @@ import <cstdint>;
 import CWindow;
 import CTrampolineHook32;
 
+import CVector2;
+import CVector3;
+
 export class CRenderer final {
 public:
 	[[nodiscard]] explicit CRenderer( void ) noexcept;

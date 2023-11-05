@@ -27,7 +27,7 @@ constexpr const BYTE arrRestoreStack[2u] = {
 constexpr const std::uint8_t SIZE_OF_JMP = 5u;
 constexpr const std::uint8_t SIZE_OF_CALL = ::SIZE_OF_JMP;
 
-export template<MID_HOOK_ORDER midHookOrder, typename ... T> class CMidHook32 final : public IHook {
+export template<MID_HOOK_ORDER midHookOrder> class CMidHook32 final : public IHook {
 public:
 	[[nodiscard]] explicit CMidHook32(
 		_In_ void* const vpHookAddress,
@@ -51,7 +51,7 @@ public:
 		other.m_byArrStolenBytes = nullptr;
 	}
 public:
-	~CMidHook32(void) noexcept {
+	virtual ~CMidHook32(void) noexcept {
 		~(*this);
 	}
 public:

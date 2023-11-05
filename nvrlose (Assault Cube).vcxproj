@@ -172,6 +172,7 @@
     <ClCompile Include="src\core\AssaultCube\weapon.ixx" />
     <ClCompile Include="src\core\CDetour32.cxx" />
     <ClCompile Include="src\core\CDetour32.ixx" />
+    <ClCompile Include="src\core\CMenu.ixx" />
     <ClCompile Include="src\core\CMidHook32.ixx" />
     <ClCompile Include="src\core\CPlayer.ixx" />
     <ClCompile Include="src\core\CTraceRay.cxx" />
@@ -186,11 +187,15 @@
     <ClCompile Include="src\core\CWindow.cxx" />
     <ClCompile Include="src\core\CWindow.ixx" />
     <ClCompile Include="src\core\dllmain.cpp" />
+    <ClCompile Include="src\core\gl.cxx" />
+    <ClCompile Include="src\core\gl.ixx" />
     <ClCompile Include="src\core\globals.ixx" />
     <ClCompile Include="src\core\AssaultCube\gun.ixx" />
     <ClCompile Include="src\core\IHook.ixx" />
-    <ClCompile Include="src\core\modules\combat\aimbot.cxx" />
-    <ClCompile Include="src\core\modules\combat\aimbot.ixx" />
+    <ClCompile Include="src\core\modules\visuals\ESP.cxx" />
+    <ClCompile Include="src\core\modules\visuals\ESP.ixx" />
+    <ClCompile Include="src\core\modules\visuals\snaplines.cxx" />
+    <ClCompile Include="src\core\modules\visuals\snaplines.ixx" />
     <ClCompile Include="src\core\offsets.ixx" />
     <ClCompile Include="src\core\utils.cxx" />
     <ClCompile Include="src\core\utils.ixx" />

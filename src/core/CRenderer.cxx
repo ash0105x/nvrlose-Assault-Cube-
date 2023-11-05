@@ -6,7 +6,10 @@ import CWindow;
 import CTrampolineHook32;
 import utils;
 import globals;
-import aimbot;
+import snaplines;
+import ESP;
+import gl;
+
 import CTraceRay;
 
 import CVector2;
@@ -32,6 +35,20 @@ import <array>;
 #include"../external/ImGui/imgui.h"
 #include"../external/ImGui/imgui_impl_win32.h"
 #include"../external/ImGui/imgui_impl_opengl2.h"
+
+namespace modules {
+    namespace combat {
+        namespace aimbot {
+            bool bToggle = false;
+        }
+    }
+}
+
+namespace globals {
+    namespace menu {
+        static bool bOpen = false;
+    }
+}
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -140,6 +157,8 @@ const bool& CRenderer::ok( void ) const noexcept {
 }
 
 void CRenderer::begin( void ) noexcept {
+    gl::setupOrtho();
+
     ImGui_ImplWin32_NewFrame();
     ImGui_ImplOpenGL2_NewFrame();
     ImGui::NewFrame();
@@ -151,10 +170,6 @@ void CRenderer::end( void ) noexcept {
     ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 }
 
-namespace menu {
-    static bool bOpen = false;
-}
-
 LRESULT CALLBACK CRenderer::hk_WndProc(
     _In_ const HWND hWnd,
     _In_ const UINT msg,
@@ -164,16 +179,16 @@ LRESULT CALLBACK CRenderer::hk_WndProc(
 {
     if (msg == WM_KEYDOWN) {
         if (wParam == VK_INSERT) {
-            menu::bOpen ^= true;
+            globals::menu::bOpen ^= true;
         }
         else if (wParam == VK_ESCAPE) {
-            menu::bOpen = false;
+            globals::menu::bOpen = false;
         }
     }
 
-    (*CRenderer::_p_SDL_WM_GrabInput)(static_cast<const CRenderer::SDL_GrabMode>(static_cast<const std::uint8_t>(menu::bOpen) + 1u));
+    (*CRenderer::_p_SDL_WM_GrabInput)(static_cast<const CRenderer::SDL_GrabMode>(static_cast<const std::uint8_t>(globals::menu::bOpen) + 1u));
 
-    if (!menu::bOpen) {
+    if (!globals::menu::bOpen) {
         return(
             CallWindowProc(
                 CRenderer::_AssaultCubeWindow.getOriginalWndProc(),
@@ -214,21 +229,9 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
         [[maybe_unused]] const ImGuiIO& refIO = ImGui::GetIO();
 
-        if (!ImGui_ImplWin32_Init(static_cast<const HWND>(CRenderer::_AssaultCubeWindow))) {
-            return bOnFailure();
-        }
-
-        if (
-            CRenderer::_bImGuiWin32Initialized = true;
-            !ImGui_ImplOpenGL2_Init()
-        )
-        {
-            return bOnFailure();
-        }
-
-        CRenderer::_bImGuiOpenGLInitialized = true;
-
-        return(
+        return (
+            (CRenderer::_bImGuiWin32Initialized = ImGui_ImplWin32_Init(static_cast<const HWND>(CRenderer::_AssaultCubeWindow))) &&
+            (CRenderer::_bImGuiOpenGLInitialized = ImGui_ImplOpenGL2_Init()) &&
             CRenderer::_AssaultCubeWindow.changeWndProc(&CRenderer::hk_WndProc) ?
             true :
             bOnFailure()
@@ -243,17 +246,14 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     CRenderer::begin();
 
-    if (menu::bOpen) {
+    if (globals::menu::bOpen) {
         static const bool bCenterWindowOnce = [](void) noexcept -> bool {
-            GLint viewPort[4u];
-            glGetIntegerv(GL_VIEWPORT, viewPort);
-
             const ImVec2 vec2WindowSize = ImGui::GetWindowSize();
 
             ImGui::SetNextWindowPos(
                 ImVec2{
-                    static_cast<const float>((viewPort[2u] - static_cast<const std::uint32_t>(vec2WindowSize.x)) / 2u),
-                    static_cast<const float>((viewPort[3u] - static_cast<const std::uint32_t>(vec2WindowSize.y)) / 2u)
+                    static_cast<const float>((globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] - static_cast<const std::uint32_t>(vec2WindowSize.x)) / 2u),
+                    static_cast<const float>((globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - static_cast<const std::uint32_t>(vec2WindowSize.y)) / 2u)
                 }
             );
 
@@ -276,18 +276,142 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         )
         {
             ImGui::Checkbox("Aimbot", &modules::combat::aimbot::bToggle);
+            ImGui::Checkbox("Snaplines", &modules::visuals::snaplines::bToggle);
+            ImGui::SliderFloat("Width", &modules::visuals::snaplines::fWidth, 0.1f, 10.f);
+            ImGui::Checkbox("ESP", &modules::visuals::ESP::bToggle);
         }
         ImGui::End();
     }
     
     CRenderer::end();
 
-    if (
-        !globals::entity::pLocalPlayer ||
-        !globals::entity::pLocalPlayer->iHealth
-    )
-    {
+    if (!globals::entity::pLocalPlayer) {
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
+    }
+
+    float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
+
+    CVector3 vec3Delta = CVector3{ };
+
+    const std::uint32_t uHalfScreenWidth = globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] / 2u;
+
+    for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
+        const CPlayer& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
+
+        if (!refCurrentPlayer.iHealth) {
+            continue;
+        }
+
+        if (modules::visuals::ESP::bToggle || modules::visuals::snaplines::bToggle) {
+            CVector2 vec2TargetOriginScreenPosition = CVector2{ };
+            if (utils::math::worldToScreen(refCurrentPlayer.vec3Origin, vec2TargetOriginScreenPosition)) {
+
+                constexpr const GLubyte arrTeamColor[4u] = { 127u, 255u, 212u, 255u };
+                constexpr const GLubyte arrEnemyColor[4u] = { 123u, 104u, 238u, 255u };
+
+                const GLubyte (&arrColor)[4u] = (
+                    refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID ?
+                    arrTeamColor :
+                    arrEnemyColor
+                );
+            
+                if (modules::visuals::snaplines::bToggle) {
+                    gl::drawLineRGBA(
+                        CVector2{
+                            static_cast<const float>(uHalfScreenWidth),
+                            -20.f
+                        },
+                        vec2TargetOriginScreenPosition,
+                        arrColor,
+                        0.1f
+                    );
+                }
+                if (modules::visuals::ESP::bToggle) {
+                    CVector2 vec2TargetEyeScreenPosition = CVector2{ };
+
+                    if (utils::math::worldToScreen(refCurrentPlayer.vec3EyePosition, vec2TargetEyeScreenPosition)) {
+                        const std::uint32_t uAdjustedWidth = 300u / static_cast<const std::uint32_t>(globals::entity::pLocalPlayer->vec3EyePosition.distance(refCurrentPlayer.vec3EyePosition));
+
+                        const std::uint32_t xPosition = static_cast<const std::uint32_t>(vec2TargetEyeScreenPosition.x) - uAdjustedWidth;
+                        const std::uint32_t yPosition = static_cast<const std::uint32_t>(vec2TargetEyeScreenPosition.y) + uAdjustedWidth;
+
+                        glLineWidth(0.1f);
+                        glColor4ub(
+                            arrColor[NULL],
+                            arrColor[1u],
+                            arrColor[2u],
+                            arrColor[3u]
+                        );
+
+                        glBegin(GL_LINE_LOOP);
+
+                        glVertex2i(
+                            xPosition,
+                            yPosition
+                        );
+
+                        glVertex2i(
+                            xPosition + (uAdjustedWidth * 2u),
+                            yPosition
+                        );
+
+                        glVertex2i(
+                            xPosition + (uAdjustedWidth * 2u),
+                            static_cast<const std::uint32_t>(vec2TargetOriginScreenPosition.y)
+                        );
+
+                        glVertex2i(
+                            xPosition,
+                            static_cast<const std::uint32_t>(vec2TargetOriginScreenPosition.y)
+                        );
+
+                        glEnd();
+                    }
+                }
+            }
+        }
+
+        if (
+            !modules::combat::aimbot::bToggle ||
+            !globals::entity::pLocalPlayer->iHealth ||
+            refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID
+        )
+        {
+            continue;
+        }
+
+        CTraceRay traceResult = CTraceRay{ };
+
+        traceResult.traceLine(
+            globals::entity::pLocalPlayer->vec3EyePosition,
+            refCurrentPlayer.vec3EyePosition,
+            globals::entity::pLocalPlayer,
+            false,
+            false
+        );
+
+        if (traceResult.bCollided) {
+            continue;
+        }
+
+        vec3Delta = refCurrentPlayer.vec3EyePosition - globals::entity::pLocalPlayer->vec3EyePosition;
+
+        if (
+            const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();
+            fCurrentPlayerDistanceToLocalPlayer < fPlayerDistanceToLocalPlayer
+        )
+        {
+            fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
+        }
+    }
+
+    if (std::numeric_limits<float>::max() != fPlayerDistanceToLocalPlayer) {
+        globals::entity::pLocalPlayer->vec2ViewAngles = CVector2{
+            // opp. / adj.
+            -atan2f(vec3Delta.x, vec3Delta.y) * CVector3::fDegreesRadiansConversionValue + 180.f,
+            // opp. / hyp.
+            (vec3Delta.z / fPlayerDistanceToLocalPlayer) * CVector3::fDegreesRadiansConversionValue
+        };
     }
 
     /*CTraceRay traceResult = CTraceRay{ };
@@ -302,10 +426,6 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     );
 
     globals::entity::pLocalPlayer->bIsShooting = !traceResult.bCollided;*/
-
-    if (modules::combat::aimbot::bToggle) {
-        modules::combat::aimbot::onToggle();
-    }
 
 	return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
 }
