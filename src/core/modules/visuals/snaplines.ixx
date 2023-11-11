@@ -1,11 +1,11 @@
 export module snaplines;
 
-import CPlayer;
+import playerent;
 
 export namespace modules {
 	namespace visuals {
 		namespace snaplines {
-			void onToggle(const CPlayer& refTarget) noexcept;
+			void onToggle(const playerent& refTarget) noexcept;
 			inline float fWidth = 0.1f;
 			inline bool bToggle = false;
 		}

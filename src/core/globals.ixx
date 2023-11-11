@@ -1,11 +1,11 @@
-#include"win32api.h"
+#include<Windows.h>
 
 export module globals;
 
-import <cstdint>;
-import <array>;
+import<cstdint>;
+import<array>;
 
-import CPlayer;
+import playerent;
 import offsets;
 
 export typedef enum : std::uint8_t {
@@ -26,9 +26,9 @@ export namespace globals {
 	}
 
 	namespace entity {
-		CPlayer* pLocalPlayer = nullptr;
+		playerent* pLocalPlayer = nullptr;
 		constexpr const std::uint8_t MAX_ENTITIES = 32u;
-		const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
+		const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
 		constexpr const std::uint8_t FIRST_ENTITY_INDEX = 1u;
 	}
 

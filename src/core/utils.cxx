@@ -3,31 +3,12 @@ import utils;
 //import <assert.h>;
 //import <iostream>;
 
-#include"win32api.h"
+#include<Windows.h>
 
 #include<iostream>
 #include<assert.h>
 
 import globals;
-
-[[nodiscard]]
-_Check_return_
-bool utils::memory::detour32_s(
-	_In_ std::uint8_t* const bypAddress,
-	_In_ const std::uint8_t* const bypNewFunction,
-	_In_ const std::size_t length
-) noexcept
-{
-	return (
-		length < 5 ?
-		false :
-		utils::memory::detour32(
-			bypAddress,
-			bypNewFunction,
-			length
-		)
-	);
-}
 
 [[nodiscard]]
 _Check_return_
@@ -37,6 +18,8 @@ bool utils::memory::detour32(
 	_In_ const std::size_t length
 ) noexcept
 {
+	assert(length >= 5u);
+
 	DWORD dwPreviousProtection = NULL;
 	if (
 		!VirtualProtect(
@@ -122,14 +105,14 @@ bool utils::math::worldToScreen(
 		) / fClipCoordinateW
 	};
 
-	const std::uint32_t uHalfScreenWidth = globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] / 2u;
-	const std::uint32_t uHalfScreenHeight = globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] / 2u;
+	const float fHalfScreenWidth = static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] / 2u);
+	const float fHalfScreenHeight = static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] / 2u);
 
 	vecRef2Screen = CVector2{
-		(static_cast<const float>(uHalfScreenWidth) * vec2NormalizedDeviceCoordinates.x) +
-		(static_cast<const float>(uHalfScreenWidth) + vec2NormalizedDeviceCoordinates.x),
-		(static_cast<const float>(uHalfScreenHeight) * vec2NormalizedDeviceCoordinates.y) +
-		(static_cast<const float>(uHalfScreenHeight) + vec2NormalizedDeviceCoordinates.y)
+		(fHalfScreenWidth * vec2NormalizedDeviceCoordinates.x) +
+		(fHalfScreenWidth + vec2NormalizedDeviceCoordinates.x),
+		(fHalfScreenHeight * vec2NormalizedDeviceCoordinates.y) +
+		(fHalfScreenHeight + vec2NormalizedDeviceCoordinates.y)
 	};
 
 	return true;

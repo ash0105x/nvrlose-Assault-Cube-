@@ -1,6 +1,6 @@
 export module IHook;
 
-import <sal.h>;
+import<sal.h>;
 
 #define PURE = 0
 

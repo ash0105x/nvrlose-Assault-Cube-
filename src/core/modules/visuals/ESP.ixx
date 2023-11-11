@@ -1,11 +1,11 @@
 export module ESP;
 
-import CPlayer;
+import playerent;
 
 export namespace modules {
 	namespace visuals {
 		namespace ESP {
-			void onToggle(const CPlayer& refTarget) noexcept;
+			void onToggle(const playerent& refTarget) noexcept;
 			inline bool bToggle = false;
 		}
 	}

@@ -1,7 +1,7 @@
 export module CVector2;
 
-import <sal.h>;
-import <compare>;
+import<sal.h>;
+import<compare>;
 
 class CVector2;
 export typedef CVector2 vec2;

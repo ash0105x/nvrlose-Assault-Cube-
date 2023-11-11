@@ -1,6 +1,6 @@
-export module CPlayer;
+export module playerent;
 
-import <cstdint>;
+import<cstdint>;
 
 import offsets;
 import CTraceRay;
@@ -35,22 +35,16 @@ export enum class CLA_PLAYER_SKIN : std::uint8_t {
 	CLA_PLAYER_SKIN_RIPPER
 };
 
-export enum class STANDING_TYPE : std::uint32_t {
-	STANDING_TYPE_STANDING = 0x1000000u,
-	STANDING_TYPE_DUCKING = 0x1010001u
-};
-
-export enum class AIR_TYPE : std::uint32_t {
-	AIR_TYPE_STILL = 0x100u,
-	AIR_TYPE_ON_AIR = 0x0u,
-	AIR_TYPE_ON_LADDER = 0x10000u,
-	AIR_TYPE_JUMP = 0x1010000u
-};
-
 export enum class PLAYER_STATE : std::uint8_t {
 	PLAYER_STATE_DEAD = 0x1u,
 	PLAYER_STATE_GHOST = 0x4u
 };
+
+export typedef enum : std::uint8_t {
+	LIFE_STATE_EX_ALIVE = 0,
+	LIFE_STATE_EX_DEAD = 1u,
+	LIFE_STATE_EX_GHOST = 5u
+}LIFE_STATE_EX;
 
 export enum class LIFE_STATE : std::int32_t {
 	LIFE_STATE_DEAD = -2,
@@ -61,15 +55,11 @@ export typedef bool TEAM_ID;
 export constexpr const TEAM_ID TEAM_ID_CLA = false;
 export constexpr const TEAM_ID TEAM_ID_RVSF = true;
 
-typedef float DUCK_STATE;
-export constexpr const DUCK_STATE DUCK_STATE_IN_UN_DUCKING_STATE = .600f;
-export constexpr const DUCK_STATE DUCK_STATE_IN_DUCKING_STATE = -::DUCK_STATE_IN_UN_DUCKING_STATE;
-
 static constexpr const std::uint8_t MAX_PLAYER_NICKNAME_CHARACTER_COUNT = 16u;
 
 // Created with ReClass.NET 1.2 by KN4CK3R
 
-export class CPlayer final {
+export class playerent final {
 public:
 	bool isVisibleTo(
 		_In_ const CVector3& vec3PlayerPosition
@@ -100,8 +90,7 @@ private:
 	const std::uint8_t N00000066; //0x0068
 public:
 	bool bIsOnGround; //0x0069
-private:
-	const char pad_006A[1]; //0x006A
+	bool bIsOnLadder;
 public:
 	bool bIsFlyingUpwards; //0x006B
 	bool bIsDucking; //0x006C
@@ -128,8 +117,9 @@ private:
 	const char pad_0090[105 - 4]; //0x0090
 public:
 	std::int32_t iHealth; //0x00F8
+	std::int32_t iArmor;  //0x00FC
 private:
-	const char pad_00FC[8]; //0x00FC
+	const char pad_00FC[4]; //0x00FC
 public:
 	WEAPON_ID uSelectedWeaponID; //0x0104
 private:
@@ -217,8 +207,9 @@ private:
 public:
 	TEAM_ID uTeamID; //0x032C
 private:
-	const char pad_032D[15]; //0x032D
+	const char pad_032D[14]; //0x032D
 public:
+	LIFE_STATE_EX uLifeStateEx;
 	LIFE_STATE iLifeState; //0x033C
 private:
 	const char pad_0340[4]; //0x0340
@@ -226,7 +217,7 @@ private:
 	const char pad_0348[40]; //0x0348
 public:
 	weapon* pPreviousWeapon; //0x0370
-	weapon* pCurrentWeapon2; //0x0374 // The same as CPlayer::pCurrentWeapon
+	weapon* pCurrentWeapon2; //0x0374 // The same as playerent::pCurrentWeapon
 	weapon* pCurrentWeapon; //0x0378
 	weapon* pConfirmedSelectedWeapon; //0x037C
 	weapon* pSelectedWeapon; //0x0380
@@ -235,7 +226,7 @@ private:
 	const char pad_0388[148]; //0x0388
 	const void* const N000001A1; //0x041C
 	const char pad_0424[4]; //0x0424
-	const CPlayer* const N000001A4; //0x0428
+	const playerent* const N000001A4; //0x0428
 	const char pad_042C[1548]; //0x042C
 }; //Size: 0x0A38
-//static_assert(sizeof(CPlayer) == 0xA38);
+//static_assert(sizeof(playerent) == 0xA38);

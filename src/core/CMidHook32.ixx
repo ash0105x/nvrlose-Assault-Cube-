@@ -1,9 +1,9 @@
-#include"win32api.h"
+#include<Windows.h>
 #include<assert.h>
 
 export module CMidHook32;
 
-import <cstdint>;
+import<cstdint>;
 
 import IHook;
 import utils;

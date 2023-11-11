@@ -1,6 +1,6 @@
 import CTrampolineHook32;
 
-#include"win32api.h"
+#include<Windows.h>
 
 import utils;
 

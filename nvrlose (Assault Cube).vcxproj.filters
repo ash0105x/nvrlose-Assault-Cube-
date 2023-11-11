@@ -24,7 +24,7 @@
     <ClCompile Include="src\core\utils.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\CPlayer.ixx">
+    <ClCompile Include="src\core\AssaultCube\playerent.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\offsets.ixx">
@@ -123,17 +123,14 @@
     <ClCompile Include="src\core\CMenu.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\gl.ixx">
+    <ClCompile Include="src\core\gl\gl.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\gl.cxx">
+    <ClCompile Include="src\core\gl\gl.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\core\win32api.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\external\ImGui\imconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>

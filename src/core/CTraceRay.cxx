@@ -1,15 +1,15 @@
 import CTraceRay;
 
 import CVector3;
-import CPlayer;
+import playerent;
 
-import <cstdint>;
+import<cstdint>;
 
 void CTraceRay::traceLine(
 	/*CTraceRay traceResult@<eax>*/ // Result
 	_In_ const CVector3& vec3PositionStart, // Starting position of the ray
 	_In_ const CVector3& vec3PositionEnd, // Ending position of the ray
-	_In_opt_ const CPlayer* const pTracer, // The player who is tracing the line
+	_In_opt_ const playerent* const pTracer, // The player who is tracing the line
 	_In_opt_ const bool bCheckPlayers, // Whether to check for players along the line
 	_In_opt_ const bool bSkipCheckingSolids // Whether to skip checking for solids along the line
 ) noexcept
@@ -44,7 +44,7 @@ void CTraceRay::traceLine(
 
 [[nodiscard]] bool CTraceRay::entityIsVisible(
 	/*bool bSkipCheckingSolids@<cl>,
-	CPlayer* pPlayer@<eax>*/
+	playerent* pPlayer@<eax>*/
 	_In_ const CVector3& vec3PositionFrom,
 	_In_ const CVector3& vec3PositionTo
 ) noexcept
@@ -73,9 +73,9 @@ void CTraceRay::traceLine(
 }
 
 [[nodiscard]] CROSSHAIR_ID CTraceRay::intersect(
-	/*CPlayer& refPlayer@<eax>,
+	/*playerent& refPlayer@<eax>,
 	CVector3 vec3Delta@<ebx>*/
-	_In_ const CPlayer& refPlayer,
+	_In_ const playerent& refPlayer,
 	_In_ const CVector3& vec3PositionFrom,
 	_In_ const CVector3& vec3PositionTo
 ) noexcept

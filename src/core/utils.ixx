@@ -1,23 +1,15 @@
 export module utils;
 
-import <sal.h>;
-import <vector>;
-import <cstdint>;
-import <array>;
+import<sal.h>;
+import<vector>;
+import<cstdint>;
+import<array>;
 
 import CVector2;
 import CVector3;
 
 export namespace utils {
 	namespace memory {
-		[[nodiscard]]
-		_Check_return_
-		bool detour32_s(
-			_In_ std::uint8_t* const bypAddress,
-			_In_ const std::uint8_t* const bypNewFunction,
-			_In_ const std::size_t length
-		) noexcept;
-
 		[[nodiscard]]
 		_Check_return_
 		bool detour32(

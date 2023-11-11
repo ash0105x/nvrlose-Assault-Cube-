@@ -1,8 +1,8 @@
 export module weapon;
 
-import <cstdint>;
+import<cstdint>;
 
-export class CPlayer;
+export class playerent;
 
 // Created with ReClass.NET 1.2 by KN4CK3R
 
@@ -23,7 +23,7 @@ public:
 private:
 	const char pad_0005[3u] = { }; //0x0005
 public:
-	CPlayer* pOwner = nullptr; //0x0008
+	playerent* pOwner = nullptr; //0x0008
 	char* cstrName = nullptr; //0x000C
 	std::uint32_t* const upReservedAmmo = nullptr; //0x0010
 	std::uint32_t* const upAmmo = nullptr; //0x0014

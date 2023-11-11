@@ -1,12 +1,12 @@
-#include"win32api.h"
+#include<Windows.h>
 
 export module CWindow;
 
-import <cstdint>;
-import <type_traits>;
+import<cstdint>;
+import<type_traits>;
 
 // Declaration of CWindow class
-export class CWindow final  {
+export class CWindow final {
 public:
 	// Constructor declarations
 	[[nodiscard]] CWindow(

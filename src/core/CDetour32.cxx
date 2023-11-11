@@ -1,8 +1,8 @@
 import CDetour32;
 
-#include"win32api.h"
+#include<Windows.h>
 
-import <cstdint>;
+import<cstdint>;
 
 #include<cassert>
 #include<exception>

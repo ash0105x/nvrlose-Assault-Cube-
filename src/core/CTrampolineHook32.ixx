@@ -1,7 +1,7 @@
 export module CTrampolineHook32;
 
-import <cstdint>;
-import <sal.h>;
+import<cstdint>;
+import<sal.h>;
 
 import IHook;
 

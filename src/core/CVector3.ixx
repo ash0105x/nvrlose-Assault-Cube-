@@ -2,9 +2,9 @@ export module CVector3;
 
 import CVector2;
 
-import <sal.h>;
-import <compare>;
-import <array>;
+import<sal.h>;
+import<compare>;
+import<array>;
 
 class CVector3;
 export typedef CVector3 vec3;

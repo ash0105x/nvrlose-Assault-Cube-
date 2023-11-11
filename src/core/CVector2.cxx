@@ -1,6 +1,6 @@
 import CVector2;
 
-import <sal.h>;
+import<sal.h>;
 
 #include<assert.h>
 

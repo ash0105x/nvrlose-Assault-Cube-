@@ -1,6 +1,6 @@
 export module CDetour32;
 
-import <cstdint>;
+import<cstdint>;
 
 import IHook;
 

@@ -1,7 +1,4 @@
 import CRenderer;
-
-#include"win32api.h"
-
 import CWindow;
 import CTrampolineHook32;
 import utils;
@@ -17,7 +14,10 @@ import CVector3;
 
 import offsets;
 
-import <array>;
+import<array>;
+
+#define NOMINMAX
+#include<Windows.h>
 
 #include<iostream>
 
@@ -182,6 +182,10 @@ LRESULT CALLBACK CRenderer::hk_WndProc(
             globals::menu::bOpen ^= true;
         }
         else if (wParam == VK_ESCAPE) {
+            if (globals::menu::bOpen) {
+                globals::menu::bOpen = false;
+                return TRUE;
+            }
             globals::menu::bOpen = false;
         }
     }
@@ -242,24 +246,11 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
-    globals::entity::pEntityList = *reinterpret_cast<const std::array<const CPlayer* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
+    globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
 
     CRenderer::begin();
 
     if (globals::menu::bOpen) {
-        static const bool bCenterWindowOnce = [](void) noexcept -> bool {
-            const ImVec2 vec2WindowSize = ImGui::GetWindowSize();
-
-            ImGui::SetNextWindowPos(
-                ImVec2{
-                    static_cast<const float>((globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] - static_cast<const std::uint32_t>(vec2WindowSize.x)) / 2u),
-                    static_cast<const float>((globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - static_cast<const std::uint32_t>(vec2WindowSize.y)) / 2u)
-                }
-            );
-
-            return false;
-        }();
-
         constexpr const char cstrClientName[] = (
             "nvrlose client"
 #ifdef _DEBUG
@@ -296,9 +287,9 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     const std::uint32_t uHalfScreenWidth = globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] / 2u;
 
     for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
-        const CPlayer& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
+        const playerent& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
 
-        if (!refCurrentPlayer.iHealth) {
+        if (refCurrentPlayer.iHealth <= NULL) {
             continue;
         }
 
@@ -314,23 +305,29 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                     arrTeamColor :
                     arrEnemyColor
                 );
-            
+
                 if (modules::visuals::snaplines::bToggle) {
                     gl::drawLineRGBA(
                         CVector2{
                             static_cast<const float>(uHalfScreenWidth),
-                            -20.f
+                            -40.f
                         },
                         vec2TargetOriginScreenPosition,
                         arrColor,
                         0.1f
                     );
                 }
+
                 if (modules::visuals::ESP::bToggle) {
                     CVector2 vec2TargetEyeScreenPosition = CVector2{ };
 
-                    if (utils::math::worldToScreen(refCurrentPlayer.vec3EyePosition, vec2TargetEyeScreenPosition)) {
-                        const std::uint32_t uAdjustedWidth = 300u / static_cast<const std::uint32_t>(globals::entity::pLocalPlayer->vec3EyePosition.distance(refCurrentPlayer.vec3EyePosition));
+                    if (
+                        std::uint32_t uAdjustedWidth = NULL;
+                        utils::math::worldToScreen(refCurrentPlayer.vec3EyePosition, vec2TargetEyeScreenPosition) &&
+                        (uAdjustedWidth = static_cast<const std::uint32_t>(globals::entity::pLocalPlayer->vec3EyePosition.distance(refCurrentPlayer.vec3EyePosition)))
+                    )
+                    {
+                        uAdjustedWidth = 300u / uAdjustedWidth;
 
                         const std::uint32_t xPosition = static_cast<const std::uint32_t>(vec2TargetEyeScreenPosition.x) - uAdjustedWidth;
                         const std::uint32_t yPosition = static_cast<const std::uint32_t>(vec2TargetEyeScreenPosition.y) + uAdjustedWidth;
@@ -366,6 +363,49 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                         );
 
                         glEnd();
+
+
+                        glBegin(GL_LINES);
+
+                        glColor4ub(
+                            NULL,
+                            255u,
+                            NULL,
+                            255u
+                        );
+
+                        glVertex2i(
+                            xPosition - (uAdjustedWidth / 2u),
+                            yPosition
+                        );
+
+                        glVertex2f(
+                            static_cast<const float>(xPosition - (uAdjustedWidth / 2u)),
+                            static_cast<const float>(yPosition) - ((static_cast<const float>(yPosition) - vec2TargetOriginScreenPosition.y) * (static_cast<const float>(refCurrentPlayer.iHealth) / 100.f))
+                        );
+
+                        glEnd();
+
+                        glBegin(GL_LINES);
+
+                        glColor4ub(
+                            128u,
+                            128u,
+                            128u,
+                            255u
+                        );
+
+                        glVertex2i(
+                            xPosition - (uAdjustedWidth / 2u),
+                            yPosition
+                        );
+
+                        glVertex2i(
+                            xPosition - (uAdjustedWidth / 2u),
+                            static_cast<const std::uint32_t>(vec2TargetOriginScreenPosition.y)
+                        );
+
+                        glEnd();
                     }
                 }
             }
@@ -373,10 +413,16 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
         if (
             !modules::combat::aimbot::bToggle ||
-            !globals::entity::pLocalPlayer->iHealth ||
-            refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID
+            globals::entity::pLocalPlayer->iHealth <= NULL
         )
         {
+            if (modules::visuals::ESP::bToggle || modules::visuals::snaplines::bToggle) {
+                continue;
+            }
+            break;
+        }
+
+        if (refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID) {
             continue;
         }
 
@@ -408,7 +454,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     if (std::numeric_limits<float>::max() != fPlayerDistanceToLocalPlayer) {
         globals::entity::pLocalPlayer->vec2ViewAngles = CVector2{
             // opp. / adj.
-            -atan2f(vec3Delta.x, vec3Delta.y) * CVector3::fDegreesRadiansConversionValue + 180.f,
+            atan2f(vec3Delta.y, vec3Delta.x) * CVector3::fDegreesRadiansConversionValue + 90.f,
             // opp. / hyp.
             (vec3Delta.z / fPlayerDistanceToLocalPlayer) * CVector3::fDegreesRadiansConversionValue
         };

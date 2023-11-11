@@ -1,6 +1,6 @@
 export module gun;
 
-import <cstdint>;
+import<cstdint>;
 
 #define PURE = NULL
 

@@ -1,9 +1,9 @@
-#include"win32api.h"
+#include<Windows.h>
 
 export module CRenderer;
 
-import <sal.h>;
-import <cstdint>;
+import<sal.h>;
+import<cstdint>;
 
 import CWindow;
 import CTrampolineHook32;

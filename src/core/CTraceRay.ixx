@@ -1,4 +1,4 @@
-#include"win32api.h"
+#include<Windows.h>
 
 export module CTraceRay;
 
@@ -13,7 +13,7 @@ export enum class CROSSHAIR_ID : std::uint32_t {
 	CROSSHAIR_ID_HEAD
 };
 
-export class CPlayer;
+export class playerent;
 
 std::uint8_t* const g_ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
 
@@ -23,21 +23,21 @@ public:
 		/*CTraceRay traceResult@<eax>*/
 		_In_ const CVector3& vec3PositionStart,
 		_In_ const CVector3& vec3PositionEnd,
-		_In_opt_ const CPlayer* const pTracer,
+		_In_opt_ const playerent* const pTracer,
 		_In_opt_ const bool bCheckPlayers,
 		_In_opt_ const bool bSkipCheckingSolids
 	) noexcept;
 public:
 	[[nodiscard]] static bool entityIsVisible(
 		/*bool bSkipCheckingSolids@<cl>,
-		CPlayer* pPlayer@<eax>*/
+		playerent* pPlayer@<eax>*/
 		_In_ const CVector3& vec3PositionFrom,
 		_In_ const CVector3& vec3PositionTo
 	) noexcept;
 	[[nodiscard]] static CROSSHAIR_ID intersect(
-		/*CPlayer& refPlayer@<eax>,
+		/*playerent& refPlayer@<eax>,
 		CVector3 vec3Delta@<ebx>*/
-		_In_ const CPlayer& refPlayer,
+		_In_ const playerent& refPlayer,
 		_In_ const CVector3& vec3PositionFrom,
 		_In_ const CVector3& vec3PositionTo
 	) noexcept;
@@ -61,11 +61,11 @@ private:
 
 	/*
 	* bool bSkipCheckingSolids is passed via register cl
-	* CPlayer* pPlayer is passed via register eax
+	* playerent* pPlayer is passed via register eax
 	*/
 	typedef bool(__cdecl* const _entityIsVisible_t)(
 		/*bool bSkipCheckingSolids@<cl>,
-		CPlayer* pPlayer@<eax>*/
+		playerent* pPlayer@<eax>*/
 		_In_ const float fPositionFromX,
 		_In_ const float fPositionFromY,
 		_In_ const float fPositionFromZ,
@@ -76,11 +76,11 @@ private:
 	inline static const CTraceRay::_entityIsVisible_t _pIsVisibleFn = reinterpret_cast<const CTraceRay::_entityIsVisible_t>(::g_ac_client_exe + offsets::ac_client_exe::function::IS_VISIBLE);
 
 	/*
-	* CPlayer& refPlayer is passed via register eax
+	* playerent& refPlayer is passed via register eax
 	* CVector3 vec3Delta is passed via register ebx
 	*/
 	typedef CROSSHAIR_ID(__cdecl* const _intersect_t)(
-		/*CPlayer& refPlayer@<eax>,
+		/*playerent& refPlayer@<eax>,
 		CVector3 vec3Delta@<ebx>*/
 		_In_ const CVector3 vec3PositionFrom,
 		_In_ const CVector3 vec3PositionTo

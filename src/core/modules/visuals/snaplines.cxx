@@ -1,17 +1,17 @@
 import snaplines;
 
 import globals;
-import CPlayer;
+import playerent;
 import utils;
 
 import <cstdint>;
 
-#include"../../win32api.h"
+#include<Windows.h>
 
 #include<gl/GL.h>
 #pragma comment(lib, "opengl32.lib")
 
-void modules::visuals::snaplines::onToggle(const CPlayer& refTarget) noexcept {
+void modules::visuals::snaplines::onToggle(const playerent& refTarget) noexcept {
 	CVector2 vec2PlayerScreenPosition = CVector2{ };
 
 	if (!utils::math::worldToScreen(refTarget.vec3Origin, vec2PlayerScreenPosition)) {
@@ -54,7 +54,7 @@ void modules::visuals::snaplines::onToggle(const CPlayer& refTarget) noexcept {
 	/*const std::uint32_t uHalfScreenWidth = globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] / 2u;
 
 	for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
-		const CPlayer& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
+		const playerent& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
 
 		if (!refCurrentPlayer.iHealth) {
 			continue;

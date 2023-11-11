@@ -1,6 +1,6 @@
 import gl;
 
-#include"win32api.h"
+#include<Windows.h>
 
 #include<gl/GL.h>
 #pragma comment(lib, "opengl32.lib")

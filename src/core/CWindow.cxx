@@ -1,6 +1,6 @@
 import CWindow;
 
-#include"win32api.h"
+#include<Windows.h>
 
 #include<exception>
 
