@@ -51,22 +51,24 @@ CTrampolineHook32& CTrampolineHook32::operator=(
 }
 
 CTrampolineHook32::~CTrampolineHook32( void ) noexcept {
-	~(*this);
+	this->detach();
 }
 
 [[nodiscard]]
 _Check_return_
 _Ret_maybenull_
 _Success_(return != nullptr)
-const void* const CTrampolineHook32::operator()(
+const void* const CTrampolineHook32::attach(
 	_In_ const void* const vpNewFunction
 ) noexcept
 {
 	assert(
 		vpNewFunction &&
+		utils::memory::isExecutableRegion(vpNewFunction) &&
 		this->m_HookLength >= 5u &&
 		!this->m_bypGateway &&
-		this->m_bypHookAddress
+		this->m_bypHookAddress &&
+		utils::memory::isExecutableRegion(this->m_bypHookAddress)
 	);
 
 	if (
@@ -110,7 +112,7 @@ const void* const CTrampolineHook32::operator()(
 }
 
 _Success_(return == true)
-bool CTrampolineHook32::operator~( void ) noexcept {
+bool CTrampolineHook32::detach(void) noexcept {
 	assert(
 		this->m_HookLength >= 5u &&
 		this->m_bypHookAddress
@@ -120,7 +122,7 @@ bool CTrampolineHook32::operator~( void ) noexcept {
 		return false;
 	}
 
-	const auto releaseGatewayAndSetToNullptr = [this]( void ) noexcept {
+	const auto releaseGatewayAndSetToNullptr = [this](void) noexcept {
 		VirtualFree(
 			this->m_bypGateway,
 			NULL,
@@ -164,20 +166,4 @@ bool CTrampolineHook32::operator~( void ) noexcept {
 	releaseGatewayAndSetToNullptr();
 
 	return true;
-}
-
-[[nodiscard]]
-_Check_return_
-_Ret_maybenull_
-_Success_(return != nullptr)
-const void* const CTrampolineHook32::attach(
-	_In_ const void* const vpNewFunction
-) noexcept
-{
-	return (*this)(vpNewFunction);
-}
-
-_Success_(return == true)
-bool CTrampolineHook32::detach(void) noexcept {
-	return ~(*this);
 }

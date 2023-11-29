@@ -11,6 +11,7 @@ import globals;
 void gl::setupOrtho(void) noexcept {
 	glGetIntegerv(GL_VIEWPORT, globals::screen::viewPort);
 
+	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	glOrtho(
@@ -21,6 +22,10 @@ void gl::setupOrtho(void) noexcept {
 		-1.0,
 		1.1
 	);
+}
+
+void gl::restoreOrtho(void) noexcept {
+	glPopMatrix();
 }
 
 static void _drawLine(

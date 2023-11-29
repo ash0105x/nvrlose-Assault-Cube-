@@ -6,6 +6,8 @@ import globals;
 import snaplines;
 import ESP;
 import gl;
+import CMenu;
+import aimbot;
 
 import CTraceRay;
 
@@ -19,8 +21,14 @@ import<array>;
 #define NOMINMAX
 #include<Windows.h>
 
-#include<iostream>
+#include<gl/GL.h>
+#pragma comment(lib, "opengl32.lib")
 
+#include"../external/ImGui/imgui_impl_win32.h"
+#include"../external/ImGui/imgui_impl_opengl2.h"
+
+#include<iostream>
+#include<string>
 #include<tuple>
 
 #define _USE_MATH_DEFINES
@@ -29,189 +37,37 @@ import<array>;
 // std::numeric_limits
 #include<limits>
 
-#include<gl/GL.h>
-#pragma comment(lib, "opengl32.lib")
-
-#include"../external/ImGui/imgui.h"
-#include"../external/ImGui/imgui_impl_win32.h"
-#include"../external/ImGui/imgui_impl_opengl2.h"
-
-namespace modules {
-    namespace combat {
-        namespace aimbot {
-            bool bToggle = false;
-        }
-    }
-}
-
-namespace globals {
-    namespace menu {
-        static bool bOpen = false;
-    }
-}
-
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-[[nodiscard]] CRenderer::CRenderer(void) noexcept {
-    if (
-        CRenderer::_AssaultCubeWindow = CWindow{ CWindow::getCurrentWindow() };
-        !static_cast<const HWND>(CRenderer::_AssaultCubeWindow)
-    )
-    {
+[[nodiscard]] CRenderer::CRenderer(
+    _In_z_ const char* const cstrName
+) noexcept
+    : m_menu(CMenu{ cstrName })
+{
+    if (!this->m_menu.ok()) {
         return;
     }
 
-    constexpr const std::uint8_t TOTAL_FUNCTIONS_TO_RETRIEVE = 2u;
+    constexpr std::uint8_t TOTAL_FUNCTIONS_TO_RETRIEVE = 2u;
 
-    const std::array<const std::tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>, TOTAL_FUNCTIONS_TO_RETRIEVE> arrFunctionsToRetrieve = std::array<const std::tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>, TOTAL_FUNCTIONS_TO_RETRIEVE> {
-        std::make_tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>(
-            __TEXT("SDL.dll"),
-            "SDL_WM_GrabInput",
-            reinterpret_cast<void** const>(&CRenderer::_p_SDL_WM_GrabInput)
-        ),
-        std::make_tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>(
-            __TEXT("opengl32.dll"),
-            "wglSwapBuffers",
-            reinterpret_cast<void** const>(&CRenderer::_p_wglSwapBuffers_gateway)
-        )
-    };
-
-    for (const std::tuple<const decltype(__TEXT('\0'))* const, const char* const, void** const>& refFunctionToRetrieve : arrFunctionsToRetrieve) {
-        typedef enum : std::uint8_t {
-            INDEX_MODULE_NAME = NULL,
-            INDEX_FUNCTION_NAME,
-            INDEX_OUT_FUNCTION_ADDRESS
-        }INDEX;
-
-        const decltype(__TEXT('\0'))* const& pRefModuleName = std::get<INDEX::INDEX_MODULE_NAME>(refFunctionToRetrieve);
-
-        const HMODULE hModule = GetModuleHandle(pRefModuleName);
-
-        constexpr const bool bModuleNameIsCharString = std::_Is_character<std::remove_const<std::remove_pointer<std::remove_reference<decltype(pRefModuleName)>::type>::type>::type>::value;
-
-        constexpr const char* const cstrModuleNameFormat = bModuleNameIsCharString ? "%s -> 0x%p" : "%ls -> 0x%p";
-
-        (*globals::function::pointer::pPopupMessage)(
-            cstrModuleNameFormat, pRefModuleName, hModule
-        );
-
-        if (!hModule) {
-            return;
-        }
-
-        const char* const& cstrRefFunctionName = std::get<INDEX::INDEX_FUNCTION_NAME>(refFunctionToRetrieve);
-
-        void*& vpRefFunctionAddress = *std::get<INDEX::INDEX_OUT_FUNCTION_ADDRESS>(refFunctionToRetrieve);
-
-        vpRefFunctionAddress = GetProcAddress(hModule, cstrRefFunctionName);
-
-        constexpr const char* const cstrFunctionNameFormat = bModuleNameIsCharString ? "%s - %s -> 0x%p" : "%ls - %s -> 0x%p";
-
-        (*globals::function::pointer::pPopupMessage)(
-            cstrFunctionNameFormat, pRefModuleName, cstrRefFunctionName, vpRefFunctionAddress
-        );
-
-        if (!vpRefFunctionAddress) {
-            return;
-        }
+    if (!(CRenderer::_p_wglSwapBuffers_gateway = static_cast<CRenderer::_wglSwapBuffers_t>(utils::module::retrieveFunction(__TEXT("opengl32.dll"), "wglSwapBuffers")))) {
+        (*globals::function::pointer::pPopupMessage)("Failed to retrieve function opengl32.dll - wglSwapBuffers");
+        return;
     }
 
-	constexpr const std::uint8_t WGL_SWAP_BUFFERS_HOOK_LENGTH = 5u;
+	constexpr std::uint8_t WGL_SWAP_BUFFERS_HOOK_LENGTH = 5u;
 
 	this->m_wglSwapBuffersTrampolineHook32 = CTrampolineHook32{ CRenderer::_p_wglSwapBuffers_gateway, WGL_SWAP_BUFFERS_HOOK_LENGTH };
 
-    CRenderer::_p_wglSwapBuffers_gateway = reinterpret_cast<const CRenderer::_wglSwapBuffers_t>(this->m_wglSwapBuffersTrampolineHook32(&CRenderer::hk_wglSwapBuffers));
+    CRenderer::_p_wglSwapBuffers_gateway = reinterpret_cast<const CRenderer::_wglSwapBuffers_t>(this->m_wglSwapBuffersTrampolineHook32.attach(&CRenderer::hk_wglSwapBuffers));
 
     this->m_bOk = CRenderer::_p_wglSwapBuffers_gateway;
 }
 
 CRenderer::~CRenderer( void ) noexcept {
 	this->m_wglSwapBuffersTrampolineHook32.detach();
-
-    if (
-        const WNDPROC& refOriginalWndProc = CRenderer::_AssaultCubeWindow.getOriginalWndProc();
-        refOriginalWndProc
-    )
-    {
-        CRenderer::_AssaultCubeWindow.changeWndProc(refOriginalWndProc);
-        ImGui_ImplOpenGL2_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-        ImGui::DestroyContext();
-    }
-    else if (CRenderer::_bImGuiOpenGLInitialized) {
-        ImGui_ImplOpenGL2_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-        ImGui::DestroyContext();
-    }
-    else if (CRenderer::_bImGuiWin32Initialized) {
-        ImGui_ImplWin32_Shutdown();
-        ImGui::DestroyContext();
-    }
-    else if (ImGui::GetCurrentContext()) {
-        ImGui::DestroyContext();
-    }
 }
 
 const bool& CRenderer::ok( void ) const noexcept {
     return this->m_bOk;
-}
-
-void CRenderer::begin( void ) noexcept {
-    gl::setupOrtho();
-
-    ImGui_ImplWin32_NewFrame();
-    ImGui_ImplOpenGL2_NewFrame();
-    ImGui::NewFrame();
-}
-
-void CRenderer::end( void ) noexcept {
-    ImGui::EndFrame();
-    ImGui::Render();
-    ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
-}
-
-LRESULT CALLBACK CRenderer::hk_WndProc(
-    _In_ const HWND hWnd,
-    _In_ const UINT msg,
-    _In_ const WPARAM wParam,
-    _In_ const LPARAM lParam
-) noexcept
-{
-    if (msg == WM_KEYDOWN) {
-        if (wParam == VK_INSERT) {
-            globals::menu::bOpen ^= true;
-        }
-        else if (wParam == VK_ESCAPE) {
-            if (globals::menu::bOpen) {
-                globals::menu::bOpen = false;
-                return TRUE;
-            }
-            globals::menu::bOpen = false;
-        }
-    }
-
-    (*CRenderer::_p_SDL_WM_GrabInput)(static_cast<const CRenderer::SDL_GrabMode>(static_cast<const std::uint8_t>(globals::menu::bOpen) + 1u));
-
-    if (!globals::menu::bOpen) {
-        return(
-            CallWindowProc(
-                CRenderer::_AssaultCubeWindow.getOriginalWndProc(),
-                hWnd,
-                msg,
-                wParam,
-                lParam
-            )
-        );
-    }
-
-    ImGui_ImplWin32_WndProcHandler(
-        hWnd,
-        msg,
-        wParam,
-        lParam
-    );
-
-    return TRUE;
 }
 
 BOOL WINAPI CRenderer::hk_wglSwapBuffers(
@@ -219,27 +75,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 ) noexcept
 {
     static const bool bInitImGuiOnce = [](void) noexcept -> bool {
-        const auto bOnFailure = [](void) noexcept -> bool {
-            (*globals::function::pointer::pPopupMessage)("Failed to initialize ImGui");
-
-            return false;
-        };
-
-        IMGUI_CHECKVERSION();
-
-        if (!ImGui::CreateContext()) {
-            return bOnFailure();
-        }
-
-        [[maybe_unused]] const ImGuiIO& refIO = ImGui::GetIO();
-
-        return (
-            (CRenderer::_bImGuiWin32Initialized = ImGui_ImplWin32_Init(static_cast<const HWND>(CRenderer::_AssaultCubeWindow))) &&
-            (CRenderer::_bImGuiOpenGLInitialized = ImGui_ImplOpenGL2_Init()) &&
-            CRenderer::_AssaultCubeWindow.changeWndProc(&CRenderer::hk_WndProc) ?
-            true :
-            bOnFailure()
-        );
+        return CMenu::initialize();
     }();
 
     if (!bInitImGuiOnce) {
@@ -248,38 +84,40 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
 
-    CRenderer::begin();
+    gl::setupOrtho();
 
-    if (globals::menu::bOpen) {
-        constexpr const char cstrClientName[] = (
-            "nvrlose client"
-#ifdef _DEBUG
-            " (dev build)"
-#endif // _DEBUG
-        );
+    constexpr std::uint8_t ARIAL_FONT_HEIGHT = 12u;
 
-        if (
-            ImGui::Begin(
-                cstrClientName,
-                nullptr,
-                NULL
-            )
-        )
-        {
-            ImGui::Checkbox("Aimbot", &modules::combat::aimbot::bToggle);
-            ImGui::Checkbox("Snaplines", &modules::visuals::snaplines::bToggle);
-            ImGui::SliderFloat("Width", &modules::visuals::snaplines::fWidth, 0.1f, 10.f);
-            ImGui::Checkbox("ESP", &modules::visuals::ESP::bToggle);
+    static gl::CFont arial = gl::CFont{ "arial", ARIAL_FONT_HEIGHT,  hDC };
+
+    constexpr GLubyte white[4u] = { 255, 255, 255, 255 };
+
+    arial.draw(
+        CVector2{
+            0.f,
+            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT)
+        },
+        white,
+        "Thread Id: %d (0x%xl)",
+        globals::thread::dwId,
+        globals::thread::dwId
+    );
+
+    const auto renderMenu = [](void) noexcept -> void {
+        CMenu::begin();
+        if (CMenu::_bOpen) {
+            CMenu::drawMain();
         }
-        ImGui::End();
-    }
-    
-    CRenderer::end();
+        CMenu::end();
+
+        gl::restoreOrtho();
+    };
 
     if (!globals::entity::pLocalPlayer) {
+        renderMenu();
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
-
+    
     float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
 
     CVector3 vec3Delta = CVector3{ };
@@ -293,20 +131,40 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             continue;
         }
 
+        CTraceRay traceResult = CTraceRay{ };
+
+        traceResult.traceLine(
+            globals::entity::pLocalPlayer->vec3EyePosition,
+            refCurrentPlayer.vec3EyePosition,
+            globals::entity::pLocalPlayer,
+            false,
+            false
+        );
+
+        const CVector3 vec3CurrentPlayerDelta = refCurrentPlayer.vec3EyePosition - globals::entity::pLocalPlayer->vec3EyePosition;
+
+        const float fCurrentPlayerDistanceToLocalPlayer = vec3CurrentPlayerDelta.length();
+
         if (modules::visuals::ESP::bToggle || modules::visuals::snaplines::bToggle) {
             CVector2 vec2TargetOriginScreenPosition = CVector2{ };
             if (utils::math::worldToScreen(refCurrentPlayer.vec3Origin, vec2TargetOriginScreenPosition)) {
+                constexpr GLubyte arrTeamHiddenColor[4u] = { NULL, NULL, 255u, 255u };
+                constexpr GLubyte arrTeamVisibleColor[4u] = { NULL, 255u, NULL, 255u };
 
-                constexpr const GLubyte arrTeamColor[4u] = { 127u, 255u, 212u, 255u };
-                constexpr const GLubyte arrEnemyColor[4u] = { 123u, 104u, 238u, 255u };
+                constexpr GLubyte arrEnemyHiddenColor[4u] = { 255, 255, 255, 255 };
+                constexpr GLubyte arrEnemyVisibleColor[4u] = { 255, NULL, NULL, 255 };
 
-                const GLubyte (&arrColor)[4u] = (
+                const GLubyte(&arrColor)[4u] = (
                     refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID ?
-                    arrTeamColor :
-                    arrEnemyColor
+                    traceResult.bCollided ?
+                    arrTeamHiddenColor :
+                    arrTeamVisibleColor :
+                    traceResult.bCollided ?
+                    arrEnemyHiddenColor :
+                    arrEnemyVisibleColor
                 );
 
-                if (modules::visuals::snaplines::bToggle) {
+                if (modules::visuals::snaplines::bToggle && fCurrentPlayerDistanceToLocalPlayer <= modules::visuals::snaplines::fDistance) {
                     gl::drawLineRGBA(
                         CVector2{
                             static_cast<const float>(uHalfScreenWidth),
@@ -314,24 +172,76 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                         },
                         vec2TargetOriginScreenPosition,
                         arrColor,
-                        0.1f
+                        0.00000000001f
                     );
                 }
 
-                if (modules::visuals::ESP::bToggle) {
+                if (modules::visuals::ESP::bToggle && fCurrentPlayerDistanceToLocalPlayer <= modules::visuals::ESP::fDistance) {
                     CVector2 vec2TargetEyeScreenPosition = CVector2{ };
 
                     if (
-                        std::uint32_t uAdjustedWidth = NULL;
+                        std::int32_t uAdjustedWidth = NULL;
                         utils::math::worldToScreen(refCurrentPlayer.vec3EyePosition, vec2TargetEyeScreenPosition) &&
-                        (uAdjustedWidth = static_cast<const std::uint32_t>(globals::entity::pLocalPlayer->vec3EyePosition.distance(refCurrentPlayer.vec3EyePosition)))
+                        (uAdjustedWidth = static_cast<const std::int32_t>(globals::entity::pLocalPlayer->vec3EyePosition.distance(refCurrentPlayer.vec3EyePosition)))
                     )
                     {
-                        uAdjustedWidth = 300u / uAdjustedWidth;
+                        uAdjustedWidth = 300 / uAdjustedWidth;
 
-                        const std::uint32_t xPosition = static_cast<const std::uint32_t>(vec2TargetEyeScreenPosition.x) - uAdjustedWidth;
-                        const std::uint32_t yPosition = static_cast<const std::uint32_t>(vec2TargetEyeScreenPosition.y) + uAdjustedWidth;
+                        const std::int32_t xPosition = static_cast<const std::int32_t>(vec2TargetEyeScreenPosition.x) - uAdjustedWidth;
+                        const std::int32_t xPositionRight = xPosition + (uAdjustedWidth * 2);
 
+                        const std::int32_t yPosition = static_cast<const std::int32_t>(vec2TargetEyeScreenPosition.y) + uAdjustedWidth;
+
+                        CVector2 vec2TextInformationPosition = CVector2{
+                            static_cast<const float>(xPosition),
+                            static_cast<const float>(yPosition)
+                        };
+                            
+                        arial.drawCentered(
+                            vec2TextInformationPosition,
+                            static_cast<const float>(xPositionRight),
+                            9.f,
+                            white,
+                            refCurrentPlayer.cstrNickname
+                        );
+
+                        if (refCurrentPlayer.pCurrentWeapon) {
+                            vec2TextInformationPosition.y = vec2TargetOriginScreenPosition.y;
+
+                            arial.drawCentered(
+                                vec2TextInformationPosition,
+                                static_cast<const float>(xPositionRight),
+                                9.f,
+                                white,
+                                refCurrentPlayer.pCurrentWeapon->cstrName
+                            );
+
+                            vec2TextInformationPosition.y = static_cast<const float>(vec2TargetOriginScreenPosition.y) - (static_cast<const float>(uAdjustedWidth) / 1.5f);
+
+                            char cstrAmmo[10] = {  };
+                            _itoa_s(*refCurrentPlayer.pCurrentWeapon->upAmmo, cstrAmmo, 10);
+
+                            arial.drawCentered(
+                                vec2TextInformationPosition,
+                                static_cast<const float>(xPositionRight),
+                                9.f,
+                                white,
+                                cstrAmmo
+                            );
+                        }
+
+                        vec2TextInformationPosition = CVector2{
+                            static_cast<const float>(xPosition) - (static_cast<const float>(uAdjustedWidth) / 1.5f),
+                            (vec2TextInformationPosition.y + vec2TargetEyeScreenPosition.y) / 2.f
+                        };
+
+                        arial.draw(
+                            vec2TextInformationPosition,
+                            white,
+                            std::to_string(refCurrentPlayer.iHealth).c_str()
+                        );
+
+                        // Colored esp box
                         glLineWidth(0.1f);
                         glColor4ub(
                             arrColor[NULL],
@@ -348,46 +258,81 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                         );
 
                         glVertex2i(
-                            xPosition + (uAdjustedWidth * 2u),
+                            xPositionRight,
                             yPosition
                         );
 
                         glVertex2i(
-                            xPosition + (uAdjustedWidth * 2u),
-                            static_cast<const std::uint32_t>(vec2TargetOriginScreenPosition.y)
+                            xPositionRight,
+                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
                         );
 
                         glVertex2i(
                             xPosition,
-                            static_cast<const std::uint32_t>(vec2TargetOriginScreenPosition.y)
+                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
                         );
 
                         glEnd();
 
-
-                        glBegin(GL_LINES);
-
+                        // Black outlined esp box
+                        glLineWidth(4.f);
                         glColor4ub(
                             NULL,
-                            255u,
+                            NULL,
+                            NULL,
+                            NULL
+                        );
+
+                        glBegin(GL_LINE_LOOP);
+
+                        glVertex2i(
+                            xPosition,
+                            yPosition
+                        );
+
+                        glVertex2i(
+                            xPositionRight,
+                            yPosition
+                        );
+
+                        glVertex2i(
+                            xPositionRight,
+                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
+                        );
+
+                        glVertex2i(
+                            xPosition,
+                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
+                        );
+
+                        glEnd();
+
+                        // Colored esp health bar
+                        glLineWidth(0.1f);
+                        glBegin(GL_LINES);
+
+                        const GLubyte playerHealthColorValue = static_cast<const GLubyte>(refCurrentPlayer.iHealth * 2.25f);
+
+                        glColor4ub(
+                            255u - playerHealthColorValue,
+                            playerHealthColorValue,
                             NULL,
                             255u
                         );
 
-                        glVertex2i(
-                            xPosition - (uAdjustedWidth / 2u),
-                            yPosition
+                        const float fHealthBarPositionX = static_cast<const float>(xPosition) - (static_cast<const float>(uAdjustedWidth) / 1.f);
+
+                        glVertex2f(
+                            fHealthBarPositionX,
+                            vec2TargetOriginScreenPosition.y
                         );
 
                         glVertex2f(
-                            static_cast<const float>(xPosition - (uAdjustedWidth / 2u)),
-                            static_cast<const float>(yPosition) - ((static_cast<const float>(yPosition) - vec2TargetOriginScreenPosition.y) * (static_cast<const float>(refCurrentPlayer.iHealth) / 100.f))
+                            fHealthBarPositionX,
+                            vec2TargetOriginScreenPosition.y - ((vec2TargetOriginScreenPosition.y - static_cast<const float>(yPosition)) * (static_cast<const float>(refCurrentPlayer.iHealth) / 100.f))
                         );
 
-                        glEnd();
-
-                        glBegin(GL_LINES);
-
+                        // grey esp health bar
                         glColor4ub(
                             128u,
                             128u,
@@ -395,17 +340,32 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                             255u
                         );
 
-                        glVertex2i(
-                            xPosition - (uAdjustedWidth / 2u),
-                            yPosition
+                        glVertex2f(
+                            fHealthBarPositionX,
+                            static_cast<const GLfloat>(yPosition)
                         );
 
-                        glVertex2i(
-                            xPosition - (uAdjustedWidth / 2u),
-                            static_cast<const std::uint32_t>(vec2TargetOriginScreenPosition.y)
+                        glVertex2f(
+                            fHealthBarPositionX,
+                            vec2TargetOriginScreenPosition.y
                         );
 
                         glEnd();
+
+                        constexpr GLubyte arrBlack[3u] = { NULL, NULL, NULL };
+
+                        gl::drawLineRGB(
+                            CVector2{
+                                fHealthBarPositionX,
+                                static_cast<const float>(yPosition) + 1.f
+                            },
+                            CVector2{
+                                fHealthBarPositionX,
+                                vec2TargetOriginScreenPosition.y - 1.f
+                            },
+                            arrBlack,
+                            4.f
+                        );
                     }
                 }
             }
@@ -422,32 +382,13 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             break;
         }
 
-        if (refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID) {
+        if (refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID || traceResult.bCollided) {
             continue;
         }
 
-        CTraceRay traceResult = CTraceRay{ };
-
-        traceResult.traceLine(
-            globals::entity::pLocalPlayer->vec3EyePosition,
-            refCurrentPlayer.vec3EyePosition,
-            globals::entity::pLocalPlayer,
-            false,
-            false
-        );
-
-        if (traceResult.bCollided) {
-            continue;
-        }
-
-        vec3Delta = refCurrentPlayer.vec3EyePosition - globals::entity::pLocalPlayer->vec3EyePosition;
-
-        if (
-            const float fCurrentPlayerDistanceToLocalPlayer = vec3Delta.length();
-            fCurrentPlayerDistanceToLocalPlayer < fPlayerDistanceToLocalPlayer
-        )
-        {
+        if (fCurrentPlayerDistanceToLocalPlayer < fPlayerDistanceToLocalPlayer) {
             fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
+            vec3Delta = vec3CurrentPlayerDelta;
         }
     }
 
@@ -460,18 +401,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         };
     }
 
-    /*CTraceRay traceResult = CTraceRay{ };
-
-    traceResult.traceLine(
-        globals::entity::pLocalPlayer->vec3EyePosition,
-        globals::entity::pLocalPlayer->vec3EyePosition +
-        CVector3::sphericalToCartesian(globals::entity::pLocalPlayer->vec2ViewAngles).scale(100.f),
-        globals::entity::pLocalPlayer,
-        false,
-        false
-    );
-
-    globals::entity::pLocalPlayer->bIsShooting = !traceResult.bCollided;*/
+    renderMenu();
 
 	return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
 }

@@ -1,9 +1,12 @@
+#include<Windows.h>
+
 export module utils;
 
 import<sal.h>;
 import<vector>;
 import<cstdint>;
 import<array>;
+import<tchar.h>;
 
 import CVector2;
 import CVector3;
@@ -12,6 +15,14 @@ export namespace utils {
 	namespace memory {
 		[[nodiscard]]
 		_Check_return_
+		_Success_(return == true)
+		bool isExecutableRegion(
+			_In_opt_ const void* const vpMemoryRegion
+		) noexcept;
+
+		[[nodiscard]]
+		_Check_return_
+		_Success_(return == true)
 		bool detour32(
 			_In_ std::uint8_t* const bypAddress,
 			_In_ const std::uint8_t* const bypNewFunction,
@@ -50,32 +61,35 @@ export namespace utils {
 		) noexcept;
 	}
 
+	namespace module {
+		[[nodiscard]]
+		_Check_return_
+		_Ret_maybenull_
+		_Success_(return != nullptr)
+		const HMODULE byName(
+			_In_z_ const TCHAR* const tcstrName
+		) noexcept;
+
+		[[nodiscard]]
+		_Check_return_
+		_Ret_maybenull_
+		_Success_(return != nullptr)
+		void* const retrieveFunction(
+			_In_z_ const TCHAR* const tcstrModuleName,
+			_In_z_ const char* const cstrFunctionName
+		) noexcept;
+	}
+
 	namespace math {
 		bool worldToScreen(
 			_In_ const CVector3& vec3RefWorld,
 			_Out_ CVector2& vecRef2Screen
 		) noexcept;
 	}
-
+	
 	namespace messagebox {
-		void errorA(
-			_In_z_ const char* const cstrBody
-		) noexcept;
-
-		void errorW(
-			_In_z_ const wchar_t* const wcstrBody
-		) noexcept;
-		
-#ifdef UNICODE
-		constexpr decltype(auto) error = &utils::messagebox::errorW;
-#else
-		constexpr decltype(auto) error = &utils::messagebox::errorA;
-#endif // UNICODE
-	}
-	namespace dll {
-		__declspec(noreturn) void eject(
-			_In_ void* const vpInstDLL,
-			_In_ unsigned long int dwExitCode
+		void error(
+			_In_z_ const TCHAR* const tcstrBody
 		) noexcept;
 	}
 

@@ -7,6 +7,7 @@ export namespace modules {
 		namespace ESP {
 			void onToggle(const playerent& refTarget) noexcept;
 			inline bool bToggle = false;
+			inline float fDistance = 50;
 		}
 	}
 }

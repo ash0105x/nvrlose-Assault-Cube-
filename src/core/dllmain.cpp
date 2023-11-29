@@ -24,10 +24,6 @@ import CDetour32;
 #include<assert.h>
 
 namespace globals {
-    namespace thread {
-        static DWORD dwId = NULL;
-    }
-
     static CRenderer* pRenderer = nullptr;
 }
 
@@ -35,54 +31,55 @@ static const void* vpHealthJumpBackAddress = nullptr;
 
 static void __declspec(naked) hkHealthDecreaseOpcode(void) noexcept {
     __asm {
+        // ebx is the defender, but 0xF4 bytes ahead from the playerent base
+
+        // Setting eax to the localPlayer pointer
         mov eax, dword ptr[globals::modules::ac_client_exe]
         add eax, dword ptr[offsets::ac_client_exe::pointer::LOCAL_PLAYER]
         mov eax, dword ptr[eax]
-        mov al, byte ptr[eax + 0x032Cu] // 0x032C is the offset for uTeamID in the playerent class
 
+        // Setting al to the localPlayer's teamID (std::uint8_t)
+        mov al, byte ptr[eax + 0x032Cu]
+
+        // Comparing the defender's teamID with our's
         cmp byte ptr[ebx + 0x238u], al
+
+        // Jump if the defender is our teammate
         je short onTeammate
 
+        // Will be executed if the defender is NOT our teammate
+        // Setting eax to the current defender's health. eax holds the damage taken value
         mov eax, dword ptr[ebx + 0x4u]
+        // Setting the defender's health to zero
         mov dword ptr[ebx + 0x4u], NULL
 
+        // Continue original game code execution to prevent crashes
         jmp dword ptr[vpHealthJumpBackAddress]
     onTeammate:
+        // Setting the damage taken value to zero.
         xor eax, eax
+        // Setting the defender's health to 100
         mov dword ptr[ebx + 0x4u], 100u
 
+        // Continue original game code execution to prevent crashes
         jmp dword ptr[vpHealthJumpBackAddress]
     }
 }
 
-static const void* vpAmmoJumpBackAddress = nullptr;
+static void hkShoot() noexcept {
+    weapon* This = nullptr;
 
-static void __declspec(naked) hkAmmoDecreaseOpcode(void) noexcept {
     __asm {
-        // esi holds our weapon object
-        // Setting ebx to our localPlayer pointer
-        mov ebx, dword ptr[globals::modules::ac_client_exe]
-        add ebx, dword ptr[offsets::ac_client_exe::pointer::LOCAL_PLAYER]
-        mov ebx, dword ptr[ebx]
+        mov dword ptr[This], esi
+    }
 
-        mov eax, dword ptr[esi + 0x0008u] // 0x0008 is the offset for pOwner in the weapon class
-
-        // Reading the localPlayer's teamID and setting it to bl
-        mov bl, byte ptr[ebx + 0x032Cu] // 0x032C is the offset for uTeamID in the playerent class
-
-        cmp byte ptr[eax + 0x032Cu], bl // 0x032C is the offset for uTeamID in the playerent class
-        mov ebx, dword ptr[esi + 0x0010u] // 0x0010u is the offset for upReservedAmmo in the weapon class
-        je short onTeammate
-
-        xor eax, eax
-        jmp short applyNewHealth
-    onTeammate:
-        mov eax, 999999999u
-    applyNewHealth:
-        mov dword ptr[ebx], eax
-        mov esi, dword ptr[esi + 0x0014u] // 0x0014u is the offset for upAmmo in the weapon class
-        mov dword ptr[esi], eax
-        jmp dword ptr[vpAmmoJumpBackAddress]
+    if (This->pOwner->uTeamID == globals::entity::pLocalPlayer->uTeamID) {
+        *This->upAmmo = 999999u;
+        *This->upReservedAmmo = 999999u;
+    }
+    else {
+        *This->upAmmo = NULL;
+        *This->upReservedAmmo = NULL;
     }
 }
 
@@ -90,19 +87,31 @@ static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
 ) noexcept
 {
-    (*globals::function::pointer::pPopupMessage)("Current thread Id: 0x%p", globals::thread::dwId);
+    (*globals::function::pointer::pPopupMessage)("Thread Id: %d (0x%xl)", globals::thread::dwId);
 
     globals::entity::pLocalPlayer = *reinterpret_cast<playerent* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
     globals::match::bypPlayerInGame = reinterpret_cast<const std::uint8_t* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::I_CURRENT_PLAYER_IN_GAME);
-    globals::screen::pModelViewProjectionMatrix = reinterpret_cast<float* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::MODEL_VIEW_PROJECTION_MATRIX);
+    globals::screen::pModelViewProjectionMatrix = reinterpret_cast<const float* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::MODEL_VIEW_PROJECTION_MATRIX);
+    globals::screen::vec3CurrentWeaponEndTrajectory = reinterpret_cast<const CVector3* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::VEC3_CURRENT_WEAPON_END_TRAJECTORY);
 
     const auto exit = [&vpInstDLL](_In_z_ const char* const cstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void {
         assert(cstrMessage);
         
         (*globals::function::pointer::pPopupMessage)(cstrMessage);
 
-        utils::dll::eject(vpInstDLL, dwExitCode);
+        FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
     };
+
+    try {
+        globals::pRenderer = new CRenderer{ "nvrlose client (Assault Cube)" };
+    }
+    catch (const std::bad_alloc&) {
+        exit("Failed to allocate enough memory to hold the \"CRenderer\"-class!", ERROR_NOT_ENOUGH_MEMORY);
+    }
+
+    if (!globals::pRenderer->ok()) {
+        exit("Failed to make in-game-rendering possible!", ERROR_FUNCTION_FAILED);
+    }
 
     CDetour32 healthOpcodeHook = CDetour32{
         globals::modules::ac_client_exe + 0x29D1Fu,
@@ -113,24 +122,17 @@ static DWORD CALLBACK MainThread(
         exit("Failed to enable godmode cheat", ERROR_FUNCTION_FAILED);
     }
 
-    CDetour32 ammoDecreaseHook = CDetour32{
-        globals::modules::ac_client_exe + 0x637E6u,
-        5u
+    CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST> ammoDecreaseHook = CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>{
+        globals::modules::ac_client_exe + 0x6366Cu,
+        8u
     };
 
-    if (!(::vpAmmoJumpBackAddress = ammoDecreaseHook.attach(&::hkAmmoDecreaseOpcode))) {
-        exit("Failed to enable unlimited ammo cheat", ERROR_FUNCTION_FAILED);
-    }
-    
-    try {
-        globals::pRenderer = new CRenderer{ };
-    }
-    catch (const std::bad_alloc&) {
-        exit("Failed to allocate enough memory to hold the \"CRenderer\"-class!", ERROR_NOT_ENOUGH_MEMORY);
-    }
+    if (!ammoDecreaseHook.attach(&::hkShoot)) {
+        if (!healthOpcodeHook.detach()) {
+            (*globals::function::pointer::pPopupMessage)("Failed to detach the godmode hook", ERROR_FUNCTION_FAILED);
+        }
 
-    if (!globals::pRenderer->ok()) {
-        exit("Failed to hook function \"wglSwapBuffers\" in module \"OpenGL32.dll\" to make in-game-rendering possible!", ERROR_FUNCTION_FAILED);
+        exit("Failed to enable unlimited ammo cheat", ERROR_FUNCTION_FAILED);
     }
 
     while (!GetAsyncKeyState(VK_END)) {
@@ -138,14 +140,14 @@ static DWORD CALLBACK MainThread(
     }
 
     if (!ammoDecreaseHook.detach()) {
-        exit("Failed to disable unlimited ammo cheat", ERROR_FUNCTION_FAILED);
+        (*globals::function::pointer::pPopupMessage)("Failed to disable unlimited ammo cheat", ERROR_FUNCTION_FAILED);
     }
 
     if (!healthOpcodeHook.detach()) {
-        exit("Failed to detach the godmode hook", ERROR_FUNCTION_FAILED);
+        (*globals::function::pointer::pPopupMessage)("Failed to detach the godmode hook", ERROR_FUNCTION_FAILED);
     }
 
-    utils::dll::eject(vpInstDLL, ERROR_SUCCESS);
+    FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), ERROR_SUCCESS);
     return TRUE;
 }
 
@@ -194,9 +196,11 @@ BOOL APIENTRY DllMain(
     }
     else if (DLL_PROCESS_DETACH == fdwReason) {
         if (bInvalidModule) {
-            (*utils::messagebox::error)(__TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into the wrong process!"));
+            utils::messagebox::error(__TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into the wrong process!"));
             return TRUE;
         }
+
+        (*globals::function::pointer::pPopupMessage)("Exitting...");
 
         if (globals::pRenderer) {
             delete globals::pRenderer;

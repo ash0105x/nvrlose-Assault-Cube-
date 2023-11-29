@@ -1,3 +1,5 @@
+#include<array>
+
 export module playerent;
 
 import<cstdint>;
@@ -9,53 +11,54 @@ import weapon;
 export import CVector2;
 export import CVector3;
 
-export enum class FORWARD_STATE : std::uint8_t {
+export typedef enum class _FORWARD_STATE : std::uint8_t {
 	FORWARD_STATE_FORWARD = 0x1u,
 	FORWARD_STATE_BACKWARD = 0xFFu
-};
+}FORWARD_STATE;
 
-export enum class SIDE_STATE : std::uint8_t {
+export typedef enum class _SIDE_STATE : std::uint8_t {
 	SIDE_STATE_LEFT = 0x1u,
 	SIDE_STATE_RIGHT = 0xFFu
-};
+}SIDE_STATE;
 
-export enum class RVSF_PLAYER_SKIN : std::uint8_t {
+export typedef enum class _RVSF_PLAYER_SKIN : std::uint8_t {
 	RVSF_PLAYER_SKIN_ALPHA = NULL,
 	RVSF_PLAYER_SKIN_TANGO,
 	RVSF_PLAYER_SKIN_COBRA,
 	RVSF_PLAYER_SKIN_VIPER,
 	RVSF_PLAYER_SKIN_SWAT,
 	RVSF_PLAYER_SKIN_POLICE
-};
+}RVSF_PLAYER_SKIN;
 
-export enum class CLA_PLAYER_SKIN : std::uint8_t {
+export typedef enum class _CLA_PLAYER_SKIN : std::uint8_t {
 	CLA_PLAYER_SKIN_COMANDANTE = NULL,
 	CLA_PLAYER_SKIN_PSYCHO,
 	CLA_PLAYER_SKIN_BOMBER,
 	CLA_PLAYER_SKIN_RIPPER
-};
+}CLA_PLAYER_SKIN;
 
-export enum class PLAYER_STATE : std::uint8_t {
+export typedef enum class _PLAYER_STATE : std::uint8_t {
+	PLAYER_STATE_ALIVE = 0x0,
 	PLAYER_STATE_DEAD = 0x1u,
 	PLAYER_STATE_GHOST = 0x4u
-};
+}PLAYER_STATE;
 
-export typedef enum : std::uint8_t {
+export typedef enum class _LIFE_STATE_EX : std::uint8_t {
 	LIFE_STATE_EX_ALIVE = 0,
 	LIFE_STATE_EX_DEAD = 1u,
 	LIFE_STATE_EX_GHOST = 5u
 }LIFE_STATE_EX;
 
-export enum class LIFE_STATE : std::int32_t {
+export typedef enum class _LIFE_STATE : std::int32_t {
 	LIFE_STATE_DEAD = -2,
 	LIFE_STATE_ALIVE = -4
-};
+}LIFE_STATE;
 
 export typedef bool TEAM_ID;
-export constexpr const TEAM_ID TEAM_ID_CLA = false;
-export constexpr const TEAM_ID TEAM_ID_RVSF = true;
+export constexpr TEAM_ID TEAM_ID_CLA = false;
+export constexpr TEAM_ID TEAM_ID_RVSF = true;
 
-static constexpr const std::uint8_t MAX_PLAYER_NICKNAME_CHARACTER_COUNT = 16u;
+static constexpr std::uint8_t MAX_PLAYER_NICKNAME_CHARACTER_COUNT = 16u;
 
 // Created with ReClass.NET 1.2 by KN4CK3R
 

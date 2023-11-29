@@ -129,6 +129,12 @@
     <ClCompile Include="src\core\gl\gl.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\CMenu.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\modules\combat\aimbot.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\external\ImGui\imconfig.h">

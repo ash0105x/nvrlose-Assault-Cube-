@@ -63,5 +63,5 @@ private:
 	HWND m_hwWindow = nullptr;
 	WNDPROC m_pOriginalWndProc = nullptr;
 
-	//decltype(__TEXT(' '))* m_pOriginalWindowText = nullptr;
+	//TCHAR* m_pOriginalWindowText = nullptr;
 };

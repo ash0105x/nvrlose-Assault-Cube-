@@ -19,7 +19,7 @@ public:
 	virtual bool reload(const bool bUnknown = true) noexcept PURE; // @index 7
 private:
 	virtual void _pad_index_8( void ) noexcept PURE;  // @index 8
-	virtual void _pad_index_9( void ) noexcept PURE;  // @index 9
+	virtual bool returnZero( void ) noexcept PURE;  // @index 9
 	virtual void _pad_index_10( void ) noexcept PURE; // @index 10
 	virtual void _pad_index_11( void ) noexcept PURE; // @index 11
 	virtual void _pad_index_12( void ) noexcept PURE; // @index 12

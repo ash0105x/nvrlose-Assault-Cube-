@@ -87,7 +87,7 @@ public:
 		_In_ const CVector3&
 	) noexcept;
 public:
-	inline static constexpr const float fDegreesRadiansConversionValue = static_cast<const float>(180.0 / 3.14159265358979323846); // pi;
+	inline static constexpr float fDegreesRadiansConversionValue = static_cast<const float>(180.0 / 3.14159265358979323846); // pi;
 public:
 	float x = 0.f;
 	float y = 0.f;

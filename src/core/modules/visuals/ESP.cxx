@@ -18,8 +18,8 @@ void modules::visuals::ESP::onToggle(const playerent& refTarget) noexcept {
 		return;
 	}
 
-	constexpr const GLubyte arrTeamColor[4u] = { NULL, 255, NULL, 255 };
-	constexpr const GLubyte arrEnemyColor[4u] = { 255, NULL, NULL, 255 };
+	constexpr GLubyte arrTeamColor[4u] = { NULL, 255, NULL, 255 };
+	constexpr GLubyte arrEnemyColor[4u] = { 255, NULL, NULL, 255 };
 
 	const GLubyte (&arrColor)[4u] = (
 		refTarget.uTeamID == globals::entity::pLocalPlayer->uTeamID ?

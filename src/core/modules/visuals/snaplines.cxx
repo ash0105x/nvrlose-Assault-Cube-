@@ -18,8 +18,8 @@ void modules::visuals::snaplines::onToggle(const playerent& refTarget) noexcept 
 		return;
 	}
 
-	constexpr const GLubyte arrTeamColor[4u] = { 127u, 255u, 212u, 255u };
-	constexpr const GLubyte arrEnemyColor[4u] = { 123u, 104u, 238u, 255u };
+	constexpr GLubyte arrTeamColor[4u] = { 127u, 255u, 212u, 255u };
+	constexpr GLubyte arrEnemyColor[4u] = { 123u, 104u, 238u, 255u };
 
 	glLineWidth(visuals::snaplines::fWidth);
 	glBegin(GL_LINE_LOOP);

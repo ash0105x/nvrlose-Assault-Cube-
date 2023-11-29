@@ -27,18 +27,23 @@ export namespace globals {
 
 	namespace entity {
 		playerent* pLocalPlayer = nullptr;
-		constexpr const std::uint8_t MAX_ENTITIES = 32u;
+		constexpr std::uint8_t MAX_ENTITIES = 32u;
 		const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
-		constexpr const std::uint8_t FIRST_ENTITY_INDEX = 1u;
+		constexpr std::uint8_t FIRST_ENTITY_INDEX = 1u;
+	}
+
+	namespace screen {
+		std::int32_t viewPort[4u];
+		const float* pModelViewProjectionMatrix = nullptr;
+		const CVector3* vec3CurrentWeaponEndTrajectory = nullptr;
 	}
 
 	namespace modules {
 		std::uint8_t* const ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
 	}
 
-	namespace screen {
-		std::int32_t viewPort[4u];
-		float* pModelViewProjectionMatrix = nullptr;
+	namespace thread {
+		DWORD dwId = NULL;
 	}
 
 	namespace match {

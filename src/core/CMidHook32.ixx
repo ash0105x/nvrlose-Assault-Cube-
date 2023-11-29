@@ -8,34 +8,21 @@ import<cstdint>;
 import IHook;
 import utils;
 
-export enum class MID_HOOK_ORDER : std::uint8_t {
+export typedef enum class _MID_HOOK_ORDER : std::uint8_t {
 	MID_HOOK_ORDER_STOLEN_BYTES_FIRST,
 	MID_HOOK_ORDER_STOLEN_BYTES_LAST,
 	MID_HOOK_ORDER_STOLEN_BYTES_DISCARD
-};
-
-constexpr const BYTE arrPreserveStack[2u] = {
-	utils::x86asm::pushad,
-	utils::x86asm::pushfd
-};
-
-constexpr const BYTE arrRestoreStack[2u] = {
-	utils::x86asm::popfd,
-	utils::x86asm::popad
-};
-
-constexpr const std::uint8_t SIZE_OF_JMP = 5u;
-constexpr const std::uint8_t SIZE_OF_CALL = ::SIZE_OF_JMP;
+}MID_HOOK_ORDER;
 
 export template<MID_HOOK_ORDER midHookOrder> class CMidHook32 final : public IHook {
 public:
 	[[nodiscard]] explicit CMidHook32(
 		_In_ void* const vpHookAddress,
-		_In_ const size_t hookLength
+		_In_ const std::uint8_t uHookLength
 	) noexcept
 		:
 		m_vpHookAddress(vpHookAddress),
-		m_hookLength(hookLength)
+		m_uHookLength(uHookLength)
 	{ }
 	CMidHook32(
 		const CMidHook32&
@@ -45,14 +32,14 @@ public:
 	) noexcept
 		:
 		m_vpHookAddress(other.m_vpHookAddress),
-		m_hookLength(other.m_hookLength),
+		m_uHookLength(other.m_uHookLength),
 		m_byArrStolenBytes(other.m_byArrStolenBytes)
 	{
 		other.m_byArrStolenBytes = nullptr;
 	}
 public:
 	virtual ~CMidHook32(void) noexcept {
-		~(*this);
+		this->detach();
 	}
 public:
 	CMidHook32& operator=(
@@ -67,7 +54,7 @@ public:
 		}
 
 		this->m_vpHookAddress = other.m_vpHookAddress;
-		this->m_hookLength = other.m_hookLength;
+		this->m_uHookLength = other.m_uHookLength;
 		this->m_byArrStolenBytes = other.m_byArrStolenBytes;
 
 		other.m_byArrStolenBytes = nullptr;
@@ -78,15 +65,17 @@ public:
 	[[nodiscard]]
 	_Check_return_
 	_Success_(return != nullptr)
-	virtual const void* const operator()(
+	virtual const void* const attach(
 		_In_ const void* const vpNewFunction
 	) noexcept override
 	{
 		assert(
 			vpNewFunction &&
+			utils::memory::isExecutableRegion(vpNewFunction) &&
 			!this->m_byArrStolenBytes &&
-			this->m_hookLength >= 5u &&
-			this->m_vpHookAddress
+			this->m_uHookLength >= 5u &&
+			this->m_vpHookAddress &&
+			utils::memory::isExecutableRegion(this->m_vpHookAddress)
 		);
 
 		if (
@@ -94,7 +83,7 @@ public:
 				this->m_byArrStolenBytes = static_cast<std::uint8_t*>(
 					VirtualAlloc(
 						nullptr,
-						this->m_hookLength + 14u,
+						this->m_uHookLength + 0xE,
 						(MEM_RESERVE | MEM_COMMIT),
 						PAGE_EXECUTE_READWRITE
 					)
@@ -105,113 +94,64 @@ public:
 			return nullptr;
 		}
 
-		const auto onSuccessfullyInitialization = [this, &vpNewFunction](void) noexcept -> const void* const {
-			return(
-				utils::memory::detour32(
-					static_cast<std::uint8_t* const>(this->m_vpHookAddress),
-					this->m_byArrStolenBytes,
-					this->m_hookLength
-				) ?
-				this->m_byArrStolenBytes :
-				nullptr
-			);
-		};
-
-		if constexpr (midHookOrder == MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_FIRST) {
-			memcpy_s(
-				this->m_byArrStolenBytes,
-				this->m_hookLength,
-				this->m_vpHookAddress,
-				this->m_hookLength
-			);
-
-			memcpy_s(
-				this->m_byArrStolenBytes + this->m_hookLength,
-				sizeof(::arrPreserveStack),
-				::arrPreserveStack,
-				sizeof(::arrPreserveStack)
-			);
-
-			this->m_byArrStolenBytes[this->m_hookLength + sizeof(::arrPreserveStack)] = utils::x86asm::call;
-			*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + this->m_hookLength + sizeof(::arrPreserveStack) + 1u) = utils::memory::calculateRelativeOffset(
-				this->m_byArrStolenBytes + this->m_hookLength + sizeof(::arrPreserveStack),
-				static_cast<const std::uint8_t* const>(vpNewFunction)
-			);
-
-			memcpy_s(
-				this->m_byArrStolenBytes + this->m_hookLength + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL,
-				sizeof(::arrRestoreStack),
-				::arrRestoreStack,
-				sizeof(::arrRestoreStack)
-			);
-
-			this->m_byArrStolenBytes[this->m_hookLength + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack)] = utils::x86asm::jmp;
-			*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + this->m_hookLength + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + 1u) = utils::memory::calculateRelativeOffset(
-				this->m_byArrStolenBytes + this->m_hookLength + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack),
-				static_cast<const std::uint8_t* const>(this->m_vpHookAddress) + this->m_hookLength
-			);
-		
-			return onSuccessfullyInitialization();
-		}
-
 		memcpy_s(
-			this->m_byArrStolenBytes,
-			sizeof(::arrPreserveStack),
-			::arrPreserveStack,
-			sizeof(::arrPreserveStack)
+			MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_FIRST == midHookOrder ?
+			this->m_byArrStolenBytes :
+			MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST == midHookOrder ?
+			this->m_byArrStolenBytes + 0x9 :
+			// MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_DISCARD == midHookOrder
+			this->m_byArrStolenBytes + 0xE,
+			this->m_uHookLength,
+			this->m_vpHookAddress,
+			this->m_uHookLength
 		);
 
-		this->m_byArrStolenBytes[sizeof(::arrPreserveStack)] = utils::x86asm::call;
-		*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + 1u) = utils::memory::calculateRelativeOffset(
-			this->m_byArrStolenBytes + sizeof(::arrPreserveStack),
+		const std::uint8_t uPrepareFunctionCallOffset = (
+			MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_FIRST == midHookOrder ?
+			this->m_uHookLength :
+			0x0
+		);
+
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset] = utils::x86asm::pushad;
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x1] = utils::x86asm::pushfd;
+
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x2] = utils::x86asm::call;
+		*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + uPrepareFunctionCallOffset + 0x3) = utils::memory::calculateRelativeOffset(
+			this->m_byArrStolenBytes + uPrepareFunctionCallOffset + 0x2,
 			static_cast<const std::uint8_t* const>(vpNewFunction)
 		);
 
-		memcpy_s(
-			this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL,
-			sizeof(::arrRestoreStack),
-			::arrRestoreStack,
-			sizeof(::arrRestoreStack)
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x7] = utils::x86asm::popfd;
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x8] = utils::x86asm::popad;
+
+		const std::uint8_t uJumpBackOffset = (
+			MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_DISCARD == midHookOrder ?
+			0x9 :
+			0x9 + this->m_uHookLength
 		);
 
-		if constexpr (midHookOrder == MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST) {
-			memcpy_s(
-				this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack),
-				this->m_hookLength,
-				this->m_vpHookAddress,
-				this->m_hookLength
-			);
-
-			this->m_byArrStolenBytes[sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + this->m_hookLength] = utils::x86asm::jmp;
-			*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + this->m_hookLength + 1u) = utils::memory::calculateRelativeOffset(
-				this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + this->m_hookLength,
-				static_cast<const std::uint8_t* const>(this->m_vpHookAddress) + this->m_hookLength
-			);
-		
-			return onSuccessfullyInitialization();
-		}
-
-		this->m_byArrStolenBytes[sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack)] = utils::x86asm::jmp;
-		*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + 1u) = utils::memory::calculateRelativeOffset(
-			this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack),
-			static_cast<const std::uint8_t* const>(this->m_vpHookAddress) + this->m_hookLength
+		this->m_byArrStolenBytes[uJumpBackOffset] = utils::x86asm::jmp;
+		*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + uJumpBackOffset + 0x1) = utils::memory::calculateRelativeOffset(
+			this->m_byArrStolenBytes + uJumpBackOffset,
+			static_cast<const std::uint8_t* const>(this->m_vpHookAddress) + this->m_uHookLength
 		);
 
-		memcpy_s(
-			this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + ::SIZE_OF_JMP,
-			this->m_hookLength,
-			this->m_vpHookAddress,
-			this->m_hookLength
+		return(
+			utils::memory::detour32(
+				static_cast<std::uint8_t* const>(this->m_vpHookAddress),
+				this->m_byArrStolenBytes,
+				this->m_uHookLength
+			) ?
+			this->m_byArrStolenBytes :
+			nullptr
 		);
-
-		return onSuccessfullyInitialization();
 	}
 
 	_Success_(return == true)
-	virtual bool operator~(void) noexcept override {
+	virtual bool detach(void) noexcept override {
 		assert(
 			this->m_vpHookAddress &&
-			this->m_hookLength >= 5u
+			this->m_uHookLength >= 5u
 		);
 
 		if (!this->m_byArrStolenBytes) {
@@ -233,7 +173,7 @@ public:
 			!(
 				VirtualProtect(
 					this->m_vpHookAddress,
-					this->m_hookLength + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + ::SIZE_OF_JMP,
+					this->m_uHookLength + 0xE,
 					PAGE_EXECUTE_READWRITE,
 					&dwPreviousProtection
 				)
@@ -246,19 +186,19 @@ public:
 
 		memcpy_s(
 			this->m_vpHookAddress,
-			this->m_hookLength,
-			midHookOrder == MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_FIRST ?
+			this->m_uHookLength,
+			MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_FIRST == midHookOrder ?
 			this->m_byArrStolenBytes :
-			midHookOrder == MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST ?
-			this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) :
-			this->m_byArrStolenBytes + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + ::SIZE_OF_JMP,
-			this->m_hookLength
+			MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST == midHookOrder ?
+			this->m_byArrStolenBytes + 0x9 :
+			this->m_byArrStolenBytes + 0xE,
+			this->m_uHookLength
 		);
 
 		DWORD dwTempProtection = NULL;
 		VirtualProtect(
 			this->m_vpHookAddress,
-			this->m_hookLength + sizeof(::arrPreserveStack) + ::SIZE_OF_CALL + sizeof(::arrRestoreStack) + ::SIZE_OF_JMP,
+			this->m_uHookLength + 0xE,
 			dwPreviousProtection,
 			&dwTempProtection
 		);
@@ -266,23 +206,8 @@ public:
 		releaseStolenBytesAndSetToNullptr();
 		return true;
 	}
-public:
-	[[nodiscard]]
-	_Check_return_
-	_Success_(return != nullptr)
-	virtual const void* const attach(
-		_In_ const void* const vpNewFunction
-	) noexcept override
-	{
-		return (*this)(vpNewFunction);
-	}
-
-	_Success_(return == true)
-	virtual bool detach(void) noexcept override {
-		return ~(*this);
-	}
 private:
 	void* m_vpHookAddress = nullptr;
-	size_t m_hookLength = NULL;
+	std::uint8_t m_uHookLength = NULL;
 	std::uint8_t* m_byArrStolenBytes = nullptr;
 };

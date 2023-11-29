@@ -44,7 +44,7 @@ CDetour32& CDetour32::operator=(
 
 	this->m_bypHookAddress = other.m_bypHookAddress;
 	this->m_HookLength = other.m_HookLength;
-	this->m_byArrStolenBytes = other.m_byArrStolenBytes;
+	this->m_byArrStolenBytes = nullptr;
 
 	other.m_byArrStolenBytes = nullptr;
 
@@ -52,21 +52,23 @@ CDetour32& CDetour32::operator=(
 }
 
 CDetour32::~CDetour32(void) noexcept {
-	~(*this);
+	this->detach();
 }
 
 [[nodiscard]]
 _Check_return_
 _Success_(return != nullptr)
-const void* const CDetour32::operator()(
+const void* const CDetour32::attach(
 	_In_ const void* const vpNewFunction
 ) noexcept
 {
 	assert(
 		vpNewFunction &&
+		utils::memory::isExecutableRegion(vpNewFunction) &&
 		!this->m_byArrStolenBytes &&
 		this->m_HookLength >= 5u &&
-		this->m_bypHookAddress
+		this->m_bypHookAddress &&
+		utils::memory::isExecutableRegion(this->m_bypHookAddress)
 	);
 
 	try {
@@ -95,7 +97,7 @@ const void* const CDetour32::operator()(
 }
 
 _Success_(return == true)
-bool CDetour32::operator~(void) noexcept {
+bool CDetour32::detach(void) noexcept {
 	assert(
 		this->m_HookLength >= 5u &&
 		this->m_bypHookAddress
@@ -115,6 +117,9 @@ bool CDetour32::operator~(void) noexcept {
 		)
 	)
 	{
+		delete[] this->m_byArrStolenBytes;
+		this->m_byArrStolenBytes = nullptr;
+
 		return false;
 	}
 
@@ -137,19 +142,4 @@ bool CDetour32::operator~(void) noexcept {
 	this->m_byArrStolenBytes = nullptr;
 
 	return true;
-}
-
-[[nodiscard]]
-_Check_return_
-_Success_(return != nullptr)
-const void* const CDetour32::attach(
-	_In_ const void* const vpNewFunction
-) noexcept
-{
-	return (*this)(vpNewFunction);
-}
-
-_Success_(return == true)
-bool CDetour32::detach(void) noexcept {
-	return ~(*this);
 }
