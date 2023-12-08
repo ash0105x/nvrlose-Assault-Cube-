@@ -50,7 +50,7 @@ static void _drawLine(
 void gl::drawLineRGB(
 	_In_ const CVector2& vec2Start,
 	_In_ const CVector2& vec2End,
-	_In_ const GLubyte* const arrColor,
+	_In_ const GLubyte (&arrColor)[3],
 	_In_ const float fWidth
 ) noexcept
 {
@@ -68,7 +68,7 @@ void gl::drawLineRGB(
 void gl::drawLineRGBA(
 	_In_ const CVector2& vec2Start,
 	_In_ const CVector2& vec2End,
-	_In_ const GLubyte* const arrColor,
+	_In_ const GLubyte (&arrColor)[4],
 	_In_ const float fWidth
 ) noexcept
 {

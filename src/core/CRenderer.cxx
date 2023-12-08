@@ -8,6 +8,7 @@ import ESP;
 import gl;
 import CMenu;
 import aimbot;
+import CFont;
 
 import CTraceRay;
 
@@ -30,6 +31,7 @@ import<array>;
 #include<iostream>
 #include<string>
 #include<tuple>
+#include<chrono>
 
 #define _USE_MATH_DEFINES
 #include<math.h>
@@ -45,11 +47,13 @@ import<array>;
     if (!this->m_menu.ok()) {
         return;
     }
-
-    constexpr std::uint8_t TOTAL_FUNCTIONS_TO_RETRIEVE = 2u;
-
-    if (!(CRenderer::_p_wglSwapBuffers_gateway = static_cast<CRenderer::_wglSwapBuffers_t>(utils::module::retrieveFunction(__TEXT("opengl32.dll"), "wglSwapBuffers")))) {
-        (*globals::function::pointer::pPopupMessage)("Failed to retrieve function opengl32.dll - wglSwapBuffers");
+    
+    if (
+        const HMODULE hOpenGL32 = GetModuleHandle(__TEXT("opengl32.dll"));
+        !hOpenGL32 ||
+        !(CRenderer::_p_wglSwapBuffers_gateway = reinterpret_cast<const CRenderer::_wglSwapBuffers_t>(GetProcAddress(hOpenGL32, "wglSwapBuffers")))
+    )
+    {
         return;
     }
 
@@ -82,17 +86,41 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
-    globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
+    class AutoOrtho final {
+    public:
+        [[nodiscard]] explicit AutoOrtho(void) noexcept {
+            gl::setupOrtho();
+        }
+        ~AutoOrtho(void) noexcept {
+            gl::restoreOrtho();
+        }
+    }autoOrtho;
 
-    gl::setupOrtho();
+    constexpr std::uint8_t ARIAL_FONT_HEIGHT = 12;
 
-    constexpr std::uint8_t ARIAL_FONT_HEIGHT = 12u;
-
-    static gl::CFont arial = gl::CFont{ "arial", ARIAL_FONT_HEIGHT,  hDC };
+    static gl::CFont arial = gl::CFont{ __TEXT("arial"), ARIAL_FONT_HEIGHT, hDC };
 
     constexpr GLubyte white[4u] = { 255, 255, 255, 255 };
 
-    arial.draw(
+    if (!CRenderer::_bCanSafelyRender) {
+        constexpr const char cstrInitializingText[] = "Initializing...";
+
+        arial.draw(
+            CVector2{
+                0.f,
+                static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - (ARIAL_FONT_HEIGHT * 2) - 3)
+            },
+            white,
+            cstrInitializingText,
+            sizeof(cstrInitializingText)
+        );
+
+        return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
+    }
+
+    globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
+
+    arial.drawf(
         CVector2{
             0.f,
             static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT)
@@ -109,20 +137,46 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             CMenu::drawMain();
         }
         CMenu::end();
-
-        gl::restoreOrtho();
     };
 
     if (!globals::entity::pLocalPlayer) {
         renderMenu();
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
+
+    const std::chrono::steady_clock::time_point currentTimePoint = std::chrono::steady_clock::now();
+
+    for (std::size_t i = NULL; i < globals::vecLocalPlayerShotPositions.size(); ++i) {
+        typedef enum _SHOT_POSITION_INDEX : std::uint8_t {
+            SHOT_POSITION_INDEX_VEC3_START,
+            SHOT_POSITION_INDEX_VEC3_END,
+            SHOT_POSITION_INDEX_TIME_STAMP
+        }SHOT_POSITION_INDEX;
+
+        const std::tuple<CVector3, CVector3, std::chrono::steady_clock::time_point>& localPlayerShotPosition = globals::vecLocalPlayerShotPositions[i];
+
+        if (std::chrono::duration_cast<std::chrono::seconds>(currentTimePoint - std::get<SHOT_POSITION_INDEX::SHOT_POSITION_INDEX_TIME_STAMP>(localPlayerShotPosition)).count() >= 5) {
+            globals::vecLocalPlayerShotPositions.erase(globals::vecLocalPlayerShotPositions.begin() + i);
+            continue;
+        }
+
+        CVector2 vec2ShotStartScreenPosition = CVector2{ };
+        utils::math::worldToScreen(std::get<SHOT_POSITION_INDEX::SHOT_POSITION_INDEX_VEC3_START>(localPlayerShotPosition), vec2ShotStartScreenPosition);
+
+        CVector2 vec2ShotEndScreenPosition = CVector2{ };
+        utils::math::worldToScreen(std::get<SHOT_POSITION_INDEX::SHOT_POSITION_INDEX_VEC3_END>(localPlayerShotPosition), vec2ShotEndScreenPosition);
+
+        gl::drawLineRGBA(
+            vec2ShotStartScreenPosition,
+            vec2ShotEndScreenPosition,
+            white,
+            0.1f
+        );
+    }
     
     float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
 
     CVector3 vec3Delta = CVector3{ };
-
-    const std::uint32_t uHalfScreenWidth = globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] / 2u;
 
     for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
         const playerent& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
@@ -167,206 +221,22 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                 if (modules::visuals::snaplines::bToggle && fCurrentPlayerDistanceToLocalPlayer <= modules::visuals::snaplines::fDistance) {
                     gl::drawLineRGBA(
                         CVector2{
-                            static_cast<const float>(uHalfScreenWidth),
+                            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]) / 2.f,
                             -40.f
                         },
                         vec2TargetOriginScreenPosition,
                         arrColor,
-                        0.00000000001f
+                        0.1f
                     );
                 }
 
                 if (modules::visuals::ESP::bToggle && fCurrentPlayerDistanceToLocalPlayer <= modules::visuals::ESP::fDistance) {
-                    CVector2 vec2TargetEyeScreenPosition = CVector2{ };
-
-                    if (
-                        std::int32_t uAdjustedWidth = NULL;
-                        utils::math::worldToScreen(refCurrentPlayer.vec3EyePosition, vec2TargetEyeScreenPosition) &&
-                        (uAdjustedWidth = static_cast<const std::int32_t>(globals::entity::pLocalPlayer->vec3EyePosition.distance(refCurrentPlayer.vec3EyePosition)))
-                    )
-                    {
-                        uAdjustedWidth = 300 / uAdjustedWidth;
-
-                        const std::int32_t xPosition = static_cast<const std::int32_t>(vec2TargetEyeScreenPosition.x) - uAdjustedWidth;
-                        const std::int32_t xPositionRight = xPosition + (uAdjustedWidth * 2);
-
-                        const std::int32_t yPosition = static_cast<const std::int32_t>(vec2TargetEyeScreenPosition.y) + uAdjustedWidth;
-
-                        CVector2 vec2TextInformationPosition = CVector2{
-                            static_cast<const float>(xPosition),
-                            static_cast<const float>(yPosition)
-                        };
-                            
-                        arial.drawCentered(
-                            vec2TextInformationPosition,
-                            static_cast<const float>(xPositionRight),
-                            9.f,
-                            white,
-                            refCurrentPlayer.cstrNickname
-                        );
-
-                        if (refCurrentPlayer.pCurrentWeapon) {
-                            vec2TextInformationPosition.y = vec2TargetOriginScreenPosition.y;
-
-                            arial.drawCentered(
-                                vec2TextInformationPosition,
-                                static_cast<const float>(xPositionRight),
-                                9.f,
-                                white,
-                                refCurrentPlayer.pCurrentWeapon->cstrName
-                            );
-
-                            vec2TextInformationPosition.y = static_cast<const float>(vec2TargetOriginScreenPosition.y) - (static_cast<const float>(uAdjustedWidth) / 1.5f);
-
-                            char cstrAmmo[10] = {  };
-                            _itoa_s(*refCurrentPlayer.pCurrentWeapon->upAmmo, cstrAmmo, 10);
-
-                            arial.drawCentered(
-                                vec2TextInformationPosition,
-                                static_cast<const float>(xPositionRight),
-                                9.f,
-                                white,
-                                cstrAmmo
-                            );
-                        }
-
-                        vec2TextInformationPosition = CVector2{
-                            static_cast<const float>(xPosition) - (static_cast<const float>(uAdjustedWidth) / 1.5f),
-                            (vec2TextInformationPosition.y + vec2TargetEyeScreenPosition.y) / 2.f
-                        };
-
-                        arial.draw(
-                            vec2TextInformationPosition,
-                            white,
-                            std::to_string(refCurrentPlayer.iHealth).c_str()
-                        );
-
-                        // Colored esp box
-                        glLineWidth(0.1f);
-                        glColor4ub(
-                            arrColor[NULL],
-                            arrColor[1u],
-                            arrColor[2u],
-                            arrColor[3u]
-                        );
-
-                        glBegin(GL_LINE_LOOP);
-
-                        glVertex2i(
-                            xPosition,
-                            yPosition
-                        );
-
-                        glVertex2i(
-                            xPositionRight,
-                            yPosition
-                        );
-
-                        glVertex2i(
-                            xPositionRight,
-                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
-                        );
-
-                        glVertex2i(
-                            xPosition,
-                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
-                        );
-
-                        glEnd();
-
-                        // Black outlined esp box
-                        glLineWidth(4.f);
-                        glColor4ub(
-                            NULL,
-                            NULL,
-                            NULL,
-                            NULL
-                        );
-
-                        glBegin(GL_LINE_LOOP);
-
-                        glVertex2i(
-                            xPosition,
-                            yPosition
-                        );
-
-                        glVertex2i(
-                            xPositionRight,
-                            yPosition
-                        );
-
-                        glVertex2i(
-                            xPositionRight,
-                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
-                        );
-
-                        glVertex2i(
-                            xPosition,
-                            static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
-                        );
-
-                        glEnd();
-
-                        // Colored esp health bar
-                        glLineWidth(0.1f);
-                        glBegin(GL_LINES);
-
-                        const GLubyte playerHealthColorValue = static_cast<const GLubyte>(refCurrentPlayer.iHealth * 2.25f);
-
-                        glColor4ub(
-                            255u - playerHealthColorValue,
-                            playerHealthColorValue,
-                            NULL,
-                            255u
-                        );
-
-                        const float fHealthBarPositionX = static_cast<const float>(xPosition) - (static_cast<const float>(uAdjustedWidth) / 1.f);
-
-                        glVertex2f(
-                            fHealthBarPositionX,
-                            vec2TargetOriginScreenPosition.y
-                        );
-
-                        glVertex2f(
-                            fHealthBarPositionX,
-                            vec2TargetOriginScreenPosition.y - ((vec2TargetOriginScreenPosition.y - static_cast<const float>(yPosition)) * (static_cast<const float>(refCurrentPlayer.iHealth) / 100.f))
-                        );
-
-                        // grey esp health bar
-                        glColor4ub(
-                            128u,
-                            128u,
-                            128u,
-                            255u
-                        );
-
-                        glVertex2f(
-                            fHealthBarPositionX,
-                            static_cast<const GLfloat>(yPosition)
-                        );
-
-                        glVertex2f(
-                            fHealthBarPositionX,
-                            vec2TargetOriginScreenPosition.y
-                        );
-
-                        glEnd();
-
-                        constexpr GLubyte arrBlack[3u] = { NULL, NULL, NULL };
-
-                        gl::drawLineRGB(
-                            CVector2{
-                                fHealthBarPositionX,
-                                static_cast<const float>(yPosition) + 1.f
-                            },
-                            CVector2{
-                                fHealthBarPositionX,
-                                vec2TargetOriginScreenPosition.y - 1.f
-                            },
-                            arrBlack,
-                            4.f
-                        );
-                    }
+                    modules::visuals::ESP::onToggle(
+                        refCurrentPlayer,
+                        arial,
+                        vec2TargetOriginScreenPosition,
+                        arrColor
+                    );
                 }
             }
         }
@@ -382,14 +252,17 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             break;
         }
 
-        if (refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID || traceResult.bCollided) {
+        if (
+            refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID ||
+            traceResult.bCollided ||
+            fCurrentPlayerDistanceToLocalPlayer >= fPlayerDistanceToLocalPlayer
+        )
+        {
             continue;
         }
 
-        if (fCurrentPlayerDistanceToLocalPlayer < fPlayerDistanceToLocalPlayer) {
-            fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
-            vec3Delta = vec3CurrentPlayerDelta;
-        }
+        fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
+        vec3Delta = vec3CurrentPlayerDelta;
     }
 
     if (std::numeric_limits<float>::max() != fPlayerDistanceToLocalPlayer) {

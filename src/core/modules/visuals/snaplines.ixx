@@ -5,10 +5,10 @@ import playerent;
 export namespace modules {
 	namespace visuals {
 		namespace snaplines {
-			void onToggle(const playerent& refTarget) noexcept;
-			inline float fWidth = 0.1f;
+			inline bool bToggle = true;
+			inline constexpr float MIN_DISTANCE = 1.f;
+			inline constexpr float MAX_DISTANCE = 300.f;
 			inline float fDistance = 50.f;
-			inline bool bToggle = false;
 		}
 	}
 }

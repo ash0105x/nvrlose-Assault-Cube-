@@ -5,6 +5,7 @@ import<cstdint>;
 export class playerent;
 
 export import gun;
+export import initialWeaponData;
 
 export typedef enum class _WEAPON_ID : std::uint8_t {
 	WEAPON_ID_CARBINE = 2u,
@@ -24,7 +25,8 @@ private:
 	const char pad_0005[3u] = { }; //0x0005
 public:
 	playerent* const pOwner = nullptr; //0x0008
-	char* const cstrName = nullptr; //0x000C
+	//char* const cstrName = nullptr; //0x000C
+	initialWeaponData* const pInitialWeaponData = nullptr; //0x000C
 	std::uint32_t* const upReservedAmmo = nullptr; //0x0010
 	std::uint32_t* const upAmmo = nullptr; //0x0014
 	std::uint32_t* const upFirerate = nullptr; //0x0018

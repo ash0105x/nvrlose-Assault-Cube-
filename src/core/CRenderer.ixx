@@ -22,13 +22,15 @@ public:
 public:
 	const bool& ok( void ) const noexcept;
 private:
-	typedef BOOL(WINAPI* _wglSwapBuffers_t)(_In_ const HDC) noexcept;
+	typedef BOOL(FAR WINAPI* _wglSwapBuffers_t)(_In_ const HDC) noexcept;
 
 	inline static CRenderer::_wglSwapBuffers_t _p_wglSwapBuffers_gateway = nullptr;
 
 	static BOOL WINAPI hk_wglSwapBuffers(
 		_In_ const HDC hDC
 	) noexcept;
+public:
+	static inline bool _bCanSafelyRender = false;
 private:
 	bool m_bOk = false;
 	CMenu m_menu;

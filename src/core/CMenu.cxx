@@ -29,15 +29,18 @@ CMenu::CMenu(
 {
     if (
         CMenu::_AssaultCubeWindow = CWindow{ CWindow::getCurrentWindow() };
-        !static_cast<const HWND>(CMenu::_AssaultCubeWindow)
+        !static_cast<HWND>(CMenu::_AssaultCubeWindow)
     )
     {
-        (*globals::function::pointer::pPopupMessage)("Failed to retrieve the window by Assault Cube");
         return;
     }
 
-    if (!(CMenu::_p_SDL_WM_GrabInput = static_cast<const CMenu::_SDL_WM_GrabInput_t>(utils::module::retrieveFunction(__TEXT("SDL.dll"), "SDL_WM_GrabInput")))) {
-        (*globals::function::pointer::pPopupMessage)("Failed to retrieve function SDL.dll - SDL_WM_GrabInput");
+    if (
+        const HMODULE hSDL = GetModuleHandle(__TEXT("SDL.dll"));
+        !hSDL ||
+        !(CMenu::_p_SDL_WM_GrabInput = reinterpret_cast<const CMenu::_SDL_WM_GrabInput_t>(GetProcAddress(hSDL, "SDL_WM_GrabInput")))
+    )
+    {
         return;
     }
 
@@ -179,10 +182,9 @@ void CMenu::drawMain(void) noexcept {
 
     ImGui::Checkbox("Aimbot", &modules::combat::aimbot::bToggle);
     ImGui::Checkbox("Snaplines", &modules::visuals::snaplines::bToggle);
-    ImGui::SliderFloat("Snaplines distance", &modules::visuals::snaplines::fDistance, 1.f, 300.f);
-    ImGui::SliderFloat("Width", &modules::visuals::snaplines::fWidth, 0.1f, 10.f);
+    ImGui::SliderFloat("Snaplines distance", &modules::visuals::snaplines::fDistance, modules::visuals::snaplines::MIN_DISTANCE, modules::visuals::snaplines::MAX_DISTANCE);
     ImGui::Checkbox("ESP", &modules::visuals::ESP::bToggle);
-    ImGui::SliderFloat("ESP distance", &modules::visuals::ESP::fDistance, 1.f, 300.f);
+    ImGui::SliderFloat("ESP distance", &modules::visuals::ESP::fDistance, modules::visuals::ESP::MIN_DISTANCE, modules::visuals::ESP::MAX_DISTANCE);
 
     ImGui::End();
 }
@@ -200,26 +202,17 @@ void CMenu::end(void) noexcept {
 }
 
 bool CMenu::initialize(void) noexcept {
-    const auto bOnFailure = [](void) noexcept -> bool {
-        (*globals::function::pointer::pPopupMessage)("Failed to initialize ImGui");
-
-        return false;
-    };
-
     IMGUI_CHECKVERSION();
 
     if (!ImGui::CreateContext()) {
-        return bOnFailure();
+        return false;
     }
 
     [[maybe_unused]] const ImGuiIO& refIO = ImGui::GetIO();
 
     return (
-        (
-            (CMenu::_bImGuiWin32Initialized = ImGui_ImplWin32_Init(static_cast<const HWND>(CMenu::_AssaultCubeWindow))) &&
-            (CMenu::_bImGuiOpenGLInitialized = ImGui_ImplOpenGL2_Init()) &&
-            CMenu::_AssaultCubeWindow.changeWndProc(&CMenu::hk_WndProc)
-        ) ||
-        bOnFailure()
+        (CMenu::_bImGuiWin32Initialized = ImGui_ImplWin32_Init(static_cast<const HWND>(CMenu::_AssaultCubeWindow))) &&
+        (CMenu::_bImGuiOpenGLInitialized = ImGui_ImplOpenGL2_Init()) &&
+        CMenu::_AssaultCubeWindow.changeWndProc(&CMenu::hk_WndProc)
     );
 }

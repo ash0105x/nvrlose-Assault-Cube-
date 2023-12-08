@@ -113,16 +113,13 @@ const void* const CTrampolineHook32::attach(
 
 _Success_(return == true)
 bool CTrampolineHook32::detach(void) noexcept {
-	assert(
-		this->m_HookLength >= 5u &&
-		this->m_bypHookAddress
-	);
+	assert(this->m_HookLength >= 5u);
 
-	if (!this->m_bypGateway) {
+	if (!this->m_bypHookAddress || !this->m_bypGateway) {
 		return false;
 	}
 
-	const auto releaseGatewayAndSetToNullptr = [this](void) noexcept {
+	const auto invalidateGateway = [this](void) noexcept {
 		VirtualFree(
 			this->m_bypGateway,
 			NULL,
@@ -143,7 +140,7 @@ bool CTrampolineHook32::detach(void) noexcept {
 		)
 	)
 	{
-		releaseGatewayAndSetToNullptr();
+		invalidateGateway();
 
 		return false;
 	}
@@ -163,7 +160,7 @@ bool CTrampolineHook32::detach(void) noexcept {
 		&dwTempProtection
 	);
 
-	releaseGatewayAndSetToNullptr();
+	invalidateGateway();
 
 	return true;
 }

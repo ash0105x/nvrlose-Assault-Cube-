@@ -58,7 +58,7 @@ export typedef bool TEAM_ID;
 export constexpr TEAM_ID TEAM_ID_CLA = false;
 export constexpr TEAM_ID TEAM_ID_RVSF = true;
 
-static constexpr std::uint8_t MAX_PLAYER_NICKNAME_CHARACTER_COUNT = 16u;
+export constexpr std::uint8_t MAX_PLAYER_NICKNAME_CHARACTER_COUNT = 16u;
 
 // Created with ReClass.NET 1.2 by KN4CK3R
 
@@ -204,7 +204,7 @@ private:
 	const char pad_0210[20]; //0x0210
 public:
 	bool bIsShooting; //0x0224
-	char cstrNickname[16]; //0x0225
+	char cstrNickname[::MAX_PLAYER_NICKNAME_CHARACTER_COUNT]; //0x0225
 private:
 	const char pad_0235[247]; //0x0235
 public:

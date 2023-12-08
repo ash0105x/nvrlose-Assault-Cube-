@@ -2,6 +2,7 @@ import CTraceRay;
 
 import CVector3;
 import playerent;
+import globals;
 
 import<cstdint>;
 
@@ -80,9 +81,9 @@ void CTraceRay::traceLine(
 	_In_ const CVector3& vec3PositionTo
 ) noexcept
 {
-	const CVector3 vec3PreviousCoordinates = *CTraceRay::vec3pCoordinates;
+	const CVector3 vec3PreviousCoordinates = *globals::screen::pvec3CurrentWeaponEndTrajectory;
 
-	*CTraceRay::vec3pCoordinates = refPlayer.vec3EyePosition;
+	*globals::screen::pvec3CurrentWeaponEndTrajectory = refPlayer.vec3EyePosition;
 
 	__asm {
 		mov eax, dword ptr[refPlayer]
@@ -100,5 +101,5 @@ void CTraceRay::traceLine(
 		add esp, 0x08u
 	}
 
-	*CTraceRay::vec3pCoordinates = vec3PreviousCoordinates;
+	*globals::screen::pvec3CurrentWeaponEndTrajectory = vec3PreviousCoordinates;
 }

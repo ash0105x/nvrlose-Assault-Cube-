@@ -62,9 +62,9 @@ bool utils::memory::detour32(
 		return false;
 	}
 
-	const DWORD dwRelativeOffset = utils::memory::calculateRelativeOffset(bypAddress, bypNewFunction);
+	const std::ptrdiff_t ptrRelativeOffset = utils::memory::calculateRelativeOffset(bypAddress, bypNewFunction);
 	bypAddress[NULL] = utils::x86asm::jmp;
-	*reinterpret_cast<DWORD* const>(bypAddress + 1u) = dwRelativeOffset;
+	*reinterpret_cast<DWORD* const>(bypAddress + 1u) = ptrRelativeOffset;
 
 	DWORD dwTempProtection = NULL;
 	VirtualProtect(
@@ -78,25 +78,6 @@ bool utils::memory::detour32(
 }
 
 [[nodiscard]]
-_Must_inspect_result_
-void* const utils::memory::findDMAAddress(
-	void* const vpStart,
-	const std::vector<std::ptrdiff_t>& offsets
-) noexcept
-{
-	assert(vpStart);
-
-	BYTE* bpDMAddress = static_cast<BYTE*>(vpStart);
-
-	for (const std::ptrdiff_t& refOffset : offsets) {
-		bpDMAddress = *reinterpret_cast<BYTE* const* const>(bpDMAddress);
-		bpDMAddress += refOffset;
-	}
-
-	return bpDMAddress;
-}
-
-[[nodiscard]]
 std::ptrdiff_t utils::memory::calculateRelativeOffset(
 	_In_ const std::uint8_t* const pFrom,
 	_In_ const std::uint8_t* const pTo
@@ -105,60 +86,6 @@ std::ptrdiff_t utils::memory::calculateRelativeOffset(
 	assert(pFrom && pTo);
 
 	return static_cast<const std::ptrdiff_t>(pTo - pFrom - 5u);
-}
-
-[[nodiscard]]
-_Check_return_
-_Ret_maybenull_
-_Success_(return != nullptr)
-const HMODULE utils::module::byName(
-	_In_z_ const TCHAR* const tcstrName
-) noexcept
-{
-	assert(tcstrName && tcstrName[NULL] != __TEXT('\0'));
-
-	const HMODULE hModule = GetModuleHandle(tcstrName);
-
-	(*globals::function::pointer::pPopupMessage)(
-		std::_Is_character<std::remove_const<std::remove_reference<decltype(tcstrName[NULL])>::type>::type>::value ?
-		"module %s -> 0x%p" :
-		"module %ls -> 0x%p",
-		tcstrName
-	);
-
-	return hModule;
-}
-
-[[nodiscard]]
-_Check_return_
-_Ret_maybenull_
-_Success_(return != nullptr)
-void* const utils::module::retrieveFunction(
-	_In_z_ const TCHAR* const tcstrModuleName,
-	_In_z_ const char* const cstrFunctionName
-) noexcept
-{
-	assert(
-		tcstrModuleName && tcstrModuleName[NULL] != __TEXT('\0')&&
-		cstrFunctionName && cstrFunctionName[NULL]!= '\0'
-	);
-
-	const HMODULE hModule = utils::module::byName(tcstrModuleName);
-
-	if (!hModule) {
-		(*globals::function::pointer::pPopupMessage)("Invalid module!");
-	}
-
-	void* const vpFunction = GetProcAddress(hModule, cstrFunctionName);
-
-	(*globals::function::pointer::pPopupMessage)(
-		std::_Is_character<std::remove_const<std::remove_reference<decltype(tcstrModuleName[NULL])>::type>::type>::value ?
-		"function %s - %s -> 0x%p" :
-		"function %ls - %s -> 0x%p",
-		tcstrModuleName, cstrFunctionName, vpFunction
-	);
-
-	return vpFunction;
 }
 
 bool utils::math::worldToScreen(
@@ -203,18 +130,4 @@ bool utils::math::worldToScreen(
 	};
 
 	return true;
-}
-
-void utils::messagebox::error(
-	_In_z_ const TCHAR* const tcstrBody
-) noexcept
-{
-	assert(tcstrBody && tcstrBody[NULL] != __TEXT('\0'));
-
-	MessageBox(
-		nullptr,
-		__TEXT("Error!"),
-		tcstrBody,
-		(MB_OK | MB_ICONERROR)
-	);
 }

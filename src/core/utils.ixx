@@ -7,12 +7,66 @@ import<vector>;
 import<cstdint>;
 import<array>;
 import<tchar.h>;
+import<cassert>;
 
 import CVector2;
 import CVector3;
 
 export namespace utils {
 	namespace memory {
+		template<std::size_t t_patternLength>
+		[[nodiscard]]
+		_Must_inspect_result_
+		_Ret_maybenull_
+		_Success_(return != nullptr)
+		std::uint8_t* const findSignature(
+			_In_ const HMODULE hModule,
+			_In_z_ const BYTE(&pattern)[t_patternLength],
+			_In_z_ const char(&cstrMask)[t_patternLength]
+		) noexcept
+		{
+			assert(
+				hModule &&
+				reinterpret_cast<const std::uintptr_t>(hModule) > offsetof(IMAGE_DOS_HEADER, e_lfanew) &&
+				reinterpret_cast<const std::uintptr_t>(hModule) > t_patternLength
+			);
+
+//#ifdef _DEBUG
+//			for (std::size_t i = NULL; i < t_patternLength; ++i) {
+//				const char& cRefMaskValue = cstrMask[i];
+//
+//				assert(cRefMaskValue == '?' || cRefMaskValue == 'x');
+//			}
+//#endif // _DEBUG
+
+			const std::uint8_t* const comparableModuleEnd = reinterpret_cast<const std::uint8_t* const>(
+				reinterpret_cast<const std::uint8_t* const>(hModule) +
+				reinterpret_cast<const IMAGE_NT_HEADERS* const>(
+					reinterpret_cast<const std::uint8_t* const>(hModule) +
+					reinterpret_cast<const IMAGE_DOS_HEADER* const>(hModule)->e_lfanew
+				)->OptionalHeader.SizeOfImage - t_patternLength
+			);
+
+			for (std::uint8_t* pBase = reinterpret_cast<std::uint8_t* const>(hModule); pBase < comparableModuleEnd; ++pBase) {
+				for (std::uintptr_t patternComparisonPointer = NULL; patternComparisonPointer < t_patternLength; ++patternComparisonPointer) {
+					if (
+						'x' == cstrMask[patternComparisonPointer] &&
+						pattern[patternComparisonPointer] != pBase[patternComparisonPointer]
+					)
+					{
+						goto invalidPattern;
+					}
+				}
+
+				return pBase;
+				
+			invalidPattern:
+				continue;
+			}
+
+			return nullptr;
+		}
+
 		[[nodiscard]]
 		_Check_return_
 		_Success_(return == true)
@@ -29,13 +83,6 @@ export namespace utils {
 			_In_ const std::size_t length
 		) noexcept;
 
-		[[nodiscard]]
-		_Must_inspect_result_
-		void* const findDMAAddress(
-			void* const vpStart,
-			const std::vector<std::ptrdiff_t>& offsets
-		) noexcept;
-
 		template<const std::size_t t_OffsetCount>
 		[[nodiscard]]
 		_Must_inspect_result_
@@ -44,6 +91,8 @@ export namespace utils {
 			const std::array<std::ptrdiff_t, t_OffsetCount>& arrOffsets
 		) noexcept
 		{
+			assert(vpStart);
+
 			std::uint8_t* bypDMAAddress = static_cast<std::uint8_t*>(vpStart);
 
 			for (const std::ptrdiff_t& refOffset : arrOffsets) {
@@ -61,35 +110,10 @@ export namespace utils {
 		) noexcept;
 	}
 
-	namespace module {
-		[[nodiscard]]
-		_Check_return_
-		_Ret_maybenull_
-		_Success_(return != nullptr)
-		const HMODULE byName(
-			_In_z_ const TCHAR* const tcstrName
-		) noexcept;
-
-		[[nodiscard]]
-		_Check_return_
-		_Ret_maybenull_
-		_Success_(return != nullptr)
-		void* const retrieveFunction(
-			_In_z_ const TCHAR* const tcstrModuleName,
-			_In_z_ const char* const cstrFunctionName
-		) noexcept;
-	}
-
 	namespace math {
 		bool worldToScreen(
 			_In_ const CVector3& vec3RefWorld,
 			_Out_ CVector2& vecRef2Screen
-		) noexcept;
-	}
-	
-	namespace messagebox {
-		void error(
-			_In_z_ const TCHAR* const tcstrBody
 		) noexcept;
 	}
 

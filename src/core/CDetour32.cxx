@@ -98,14 +98,16 @@ const void* const CDetour32::attach(
 
 _Success_(return == true)
 bool CDetour32::detach(void) noexcept {
-	assert(
-		this->m_HookLength >= 5u &&
-		this->m_bypHookAddress
-	);
+	assert(this->m_HookLength >= 5u);
 
-	if (!this->m_byArrStolenBytes) {
+	if (!this->m_bypHookAddress || !this->m_byArrStolenBytes) {
 		return false;
 	}
+
+	const auto invalidateStolenBytes = [this](void) noexcept -> void {
+		delete[] this->m_byArrStolenBytes;
+		this->m_byArrStolenBytes = nullptr;
+	};
 
 	DWORD dwPreviousProtection = NULL;
 	if (
@@ -117,8 +119,7 @@ bool CDetour32::detach(void) noexcept {
 		)
 	)
 	{
-		delete[] this->m_byArrStolenBytes;
-		this->m_byArrStolenBytes = nullptr;
+		invalidateStolenBytes();
 
 		return false;
 	}
@@ -138,8 +139,7 @@ bool CDetour32::detach(void) noexcept {
 		&dwTempProtection
 	);
 
-	delete[] this->m_byArrStolenBytes;
-	this->m_byArrStolenBytes = nullptr;
+	invalidateStolenBytes();
 
 	return true;
 }

@@ -170,6 +170,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\core\AssaultCube\weapon.ixx" />
+    <ClCompile Include="src\core\AssaultCube\initialWeaponData.ixx" />
     <ClCompile Include="src\core\CDetour32.cxx" />
     <ClCompile Include="src\core\CDetour32.ixx" />
     <ClCompile Include="src\core\CMenu.cxx" />
@@ -188,6 +189,8 @@
     <ClCompile Include="src\core\CWindow.cxx" />
     <ClCompile Include="src\core\CWindow.ixx" />
     <ClCompile Include="src\core\dllmain.cpp" />
+    <ClCompile Include="src\core\gl\CFont.cxx" />
+    <ClCompile Include="src\core\gl\CFont.ixx" />
     <ClCompile Include="src\core\gl\gl.cxx" />
     <ClCompile Include="src\core\gl\gl.ixx" />
     <ClCompile Include="src\core\globals.ixx" />
@@ -196,9 +199,9 @@
     <ClCompile Include="src\core\modules\combat\aimbot.ixx" />
     <ClCompile Include="src\core\modules\visuals\ESP.cxx" />
     <ClCompile Include="src\core\modules\visuals\ESP.ixx" />
-    <ClCompile Include="src\core\modules\visuals\snaplines.cxx" />
     <ClCompile Include="src\core\modules\visuals\snaplines.ixx" />
     <ClCompile Include="src\core\offsets.ixx" />
+    <ClCompile Include="src\core\signatures.ixx" />
     <ClCompile Include="src\core\utils.cxx" />
     <ClCompile Include="src\core\utils.ixx" />
     <ClCompile Include="src\core\CTraceRay.ixx" />

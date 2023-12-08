@@ -35,7 +35,7 @@ private:
 		SDL_GRAB_ON
 	}SDL_GrabMode;
 
-	typedef CMenu::SDL_GrabMode(__cdecl* _SDL_WM_GrabInput_t)(_In_ const CMenu::SDL_GrabMode) noexcept;
+	typedef CMenu::SDL_GrabMode(FAR __cdecl* _SDL_WM_GrabInput_t)(_In_ const CMenu::SDL_GrabMode) noexcept;
 
 	inline static CMenu::_SDL_WM_GrabInput_t _p_SDL_WM_GrabInput = nullptr;
 private:

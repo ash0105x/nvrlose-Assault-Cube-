@@ -15,8 +15,6 @@ export enum class CROSSHAIR_ID : std::uint32_t {
 
 export class playerent;
 
-std::uint8_t* const g_ac_client_exe = reinterpret_cast<std::uint8_t* const>(GetModuleHandle(__TEXT("ac_client.exe")));
-
 export class CTraceRay final {
 public:
 	void traceLine(
@@ -41,11 +39,11 @@ public:
 		_In_ const CVector3& vec3PositionFrom,
 		_In_ const CVector3& vec3PositionTo
 	) noexcept;
-private:
+public:
 	/*
 	* CTraceRay traceResult is passed via register eax
 	*/
-	typedef void(__cdecl* const _traceLine_t)(
+	typedef void(__cdecl* _traceLine_t)(
 		/*CTraceRay traceResult@<eax>*/
 		_In_ const float fPositionStartX,
 		_In_ const float fPositionStartY,
@@ -57,13 +55,13 @@ private:
 		_In_opt_ const bool bCheckPlayers,
 		_In_opt_ const bool bSomeBoolSetToFalse
 	) noexcept;
-	inline static const CTraceRay::_traceLine_t _pTraceLineFn = reinterpret_cast<const CTraceRay::_traceLine_t>(::g_ac_client_exe + offsets::ac_client_exe::function::TRACE_LINE);
+	inline static CTraceRay::_traceLine_t _pTraceLineFn = nullptr;
 
 	/*
 	* bool bSkipCheckingSolids is passed via register cl
 	* playerent* pPlayer is passed via register eax
 	*/
-	typedef bool(__cdecl* const _entityIsVisible_t)(
+	typedef bool(__cdecl* _entityIsVisible_t)(
 		/*bool bSkipCheckingSolids@<cl>,
 		playerent* pPlayer@<eax>*/
 		_In_ const float fPositionFromX,
@@ -73,20 +71,19 @@ private:
 		_In_ const float fPositionToY,
 		_In_ const float fPositionToZ
 	) noexcept;
-	inline static const CTraceRay::_entityIsVisible_t _pIsVisibleFn = reinterpret_cast<const CTraceRay::_entityIsVisible_t>(::g_ac_client_exe + offsets::ac_client_exe::function::IS_VISIBLE);
+	inline static CTraceRay::_entityIsVisible_t _pIsVisibleFn = nullptr;
 
 	/*
 	* playerent& refPlayer is passed via register eax
 	* CVector3 vec3Delta is passed via register ebx
 	*/
-	typedef CROSSHAIR_ID(__cdecl* const _intersect_t)(
+	typedef CROSSHAIR_ID(__cdecl* _intersect_t)(
 		/*playerent& refPlayer@<eax>,
 		CVector3 vec3Delta@<ebx>*/
 		_In_ const CVector3 vec3PositionFrom,
 		_In_ const CVector3 vec3PositionTo
 	) noexcept;
-	inline static const CTraceRay::_intersect_t _pIntersectFn = reinterpret_cast<const CTraceRay::_intersect_t>(::g_ac_client_exe + offsets::ac_client_exe::function::INTERSECT);
-	inline static CVector3* const vec3pCoordinates = reinterpret_cast<CVector3* const>(::g_ac_client_exe + 0x10A400u);
+	inline static CTraceRay::_intersect_t _pIntersectFn = nullptr;
 public:
 	CVector3 vec3EndTrajectory = CVector3{ };
 	bool bCollided = false;
