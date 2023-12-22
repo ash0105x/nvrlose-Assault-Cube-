@@ -195,6 +195,7 @@
     <ClCompile Include="src\core\gl\gl.ixx" />
     <ClCompile Include="src\core\globals.ixx" />
     <ClCompile Include="src\core\AssaultCube\gun.ixx" />
+    <ClCompile Include="src\core\hooks.ixx" />
     <ClCompile Include="src\core\IHook.ixx" />
     <ClCompile Include="src\core\modules\combat\aimbot.ixx" />
     <ClCompile Include="src\core\modules\visuals\ESP.cxx" />

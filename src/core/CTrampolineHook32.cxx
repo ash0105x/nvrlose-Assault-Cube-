@@ -55,6 +55,7 @@ CTrampolineHook32::~CTrampolineHook32( void ) noexcept {
 }
 
 [[nodiscard]]
+_Ret_maybenull_
 _Check_return_
 _Ret_maybenull_
 _Success_(return != nullptr)

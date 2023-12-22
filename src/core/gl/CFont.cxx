@@ -44,7 +44,7 @@ gl::CFont::CFont(
 		return;
 	}
 
-	wglUseFontBitmapsA(hDC, 32, ::MAX_GLYPHS, this->m_iBase);
+	wglUseFontBitmaps(hDC, 32, ::MAX_GLYPHS, this->m_iBase);
 
 	TEXTMETRIC textMetric = TEXTMETRIC{ };
 	GetTextMetrics(hDC, &textMetric);

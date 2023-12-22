@@ -144,6 +144,9 @@
     <ClCompile Include="src\core\AssaultCube\initialWeaponData.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\core\hooks.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\external\ImGui\imconfig.h">

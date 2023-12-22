@@ -132,12 +132,55 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         CMenu::end();
     };
 
-    if (!globals::entity::pLocalPlayer) {
+    if (!globals::entity::pLocalPlayer || globals::entity::pLocalPlayer->iHealth <= NULL) {
         renderMenu();
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
     const std::chrono::steady_clock::time_point currentTimePoint = std::chrono::steady_clock::now();
+
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTimePoint - globals::lastHitTimer).count() <= 250) {
+        constexpr const float LINE_LENGTH = 7.f;
+        constexpr const float MIDDLE_PADDING = 5.f;
+        constexpr const float CROSSHAIR_LINE_WIDTH = 0.5f;
+
+        const CVector2 vec2MiddleScreen = CVector2{
+            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]) / 2.f,
+            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT]) / 2.f
+        };
+
+        for (float i = 1.f; i < 3.f; ++i) {
+            const float fCosAngle = cosf(i * 45.f);
+            const float fSinAngle = sinf(i * 45.f);
+
+            CVector2 vec2CrosshairStartPosition = CVector2{
+                vec2MiddleScreen.x - fCosAngle * MIDDLE_PADDING,
+                vec2MiddleScreen.y + fSinAngle * MIDDLE_PADDING
+            };
+
+            CVector2 vec2CrosshairEndPosition = CVector2{
+                vec2CrosshairStartPosition.x - fCosAngle * LINE_LENGTH,
+                vec2CrosshairStartPosition.y + fSinAngle * LINE_LENGTH
+            };
+
+            gl::drawLineRGBA(
+                vec2CrosshairStartPosition,
+                vec2CrosshairEndPosition,
+                ARR_WHITE,
+                CROSSHAIR_LINE_WIDTH
+            );
+
+            vec2CrosshairStartPosition.y = vec2MiddleScreen.y - fSinAngle * MIDDLE_PADDING;
+            vec2CrosshairEndPosition.y = vec2CrosshairStartPosition.y - fSinAngle * LINE_LENGTH;
+
+            gl::drawLineRGBA(
+                vec2CrosshairStartPosition,
+                vec2CrosshairEndPosition,
+                ARR_WHITE,
+                CROSSHAIR_LINE_WIDTH
+            );
+        }
+    }
 
     for (std::size_t i = NULL; i < globals::vecEntitiesHit.size(); ++i) {
         typedef enum : std::uint8_t {
@@ -146,7 +189,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             ENTITY_HIT_INDEX_HEALTH_REMAINING,
             ENTITY_HIT_INDEX_TIME_STAMP
         }ENTITY_HIT_INDEX;
-
+        
         const std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>& refEntityHit = globals::vecEntitiesHit[i];
 
         if (std::chrono::duration_cast<std::chrono::seconds>(currentTimePoint - std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_TIME_STAMP>(refEntityHit)).count() >= 5) {
@@ -154,54 +197,17 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             continue;
         }
 
-        //char cstrInfoMessage[150] = "Hit ";
-        //sprintf_s(
-        //    cstrInfoMessage,
-        //    "%s for %d damage (%d health remaining)",
-        //    std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_NICK_NAME>(refEntityHit).c_str(),
-        //    std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_DAMAGE_GIVEN>(refEntityHit),
-        //    std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_HEALTH_REMAINING>(refEntityHit)
-        //);
-
         arial.drawCenteredf(
             CVector2{
                 0.f,
-                static_cast<const float>(100 + (i * arial.getHeight()))
+                static_cast<const float>(10 * ARIAL_FONT_HEIGHT - (i * ARIAL_FONT_HEIGHT))
             },
-            globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH],
+            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]),
             ARR_WHITE,
             "Hit %s for %d damage (%d health remaining)",
             std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_NICK_NAME>(refEntityHit).c_str(),
             std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_DAMAGE_GIVEN>(refEntityHit),
             std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_HEALTH_REMAINING>(refEntityHit)
-        );
-    }
-
-    for (std::size_t i = NULL; i < globals::vecLocalPlayerShotPositions.size(); ++i) {
-        typedef enum : std::uint8_t {
-            SHOT_POSITION_INDEX_VEC3_START,
-            SHOT_POSITION_INDEX_VEC3_END,
-            SHOT_POSITION_INDEX_TIME_STAMP
-        }SHOT_POSITION_INDEX;
-
-        const std::tuple<CVector3, CVector3, std::chrono::steady_clock::time_point>& localPlayerShotPosition = globals::vecLocalPlayerShotPositions[i];
-
-        if (std::chrono::duration_cast<std::chrono::seconds>(currentTimePoint - std::get<SHOT_POSITION_INDEX::SHOT_POSITION_INDEX_TIME_STAMP>(localPlayerShotPosition)).count() >= 5) {
-            globals::vecLocalPlayerShotPositions.erase(globals::vecLocalPlayerShotPositions.begin() + i);
-            continue;
-        }
-
-        CVector2 vec2ShotStartScreenPosition = CVector2{ };
-        utils::math::worldToScreen(std::get<SHOT_POSITION_INDEX::SHOT_POSITION_INDEX_VEC3_START>(localPlayerShotPosition), vec2ShotStartScreenPosition);
-
-        CVector2 vec2ShotEndScreenPosition = CVector2{ };
-        utils::math::worldToScreen(std::get<SHOT_POSITION_INDEX::SHOT_POSITION_INDEX_VEC3_END>(localPlayerShotPosition), vec2ShotEndScreenPosition);
-
-        gl::drawLineRGBA(
-            vec2ShotStartScreenPosition,
-            vec2ShotEndScreenPosition,
-            ARR_WHITE,
-            0.1f
         );
     }
     

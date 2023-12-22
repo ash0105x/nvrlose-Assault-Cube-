@@ -107,6 +107,8 @@ bool utils::process::enumerate(
 	_In_opt_ void* const vpExtraParameter
 ) noexcept
 {
+	assert(pRefEnumFunction);
+
 	const HANDLE hProcessSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
 
 	if (INVALID_HANDLE_VALUE == hProcessSnapshot) {
@@ -162,13 +164,13 @@ bool utils::process::isRunning(
 	return(
 		utils::process::enumerate(
 			[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
-				ProcessInformation_t& pProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
+				ProcessInformation_t& refProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
 
-				if (NULL != _tcscmp(pProcessInformation.tcstrRefProcessName, refProcessInfo32.szExeFile)) {
+				if (NULL != _tcscmp(refProcessInformation.tcstrRefProcessName, refProcessInfo32.szExeFile)) {
 					return true;
 				}
 
-				pProcessInformation.bIsRunning = true;
+				refProcessInformation.bIsRunning = true;
 				return false;
 			},
 			&processInformation
@@ -190,25 +192,20 @@ const TCHAR* utils::process::name(
 
 	typedef struct ProcessInformation {
 		const DWORD& dwRefId = NULL;
-		TCHAR tcstrName[MAX_PATH] = { __TEXT('\0') };
+		const TCHAR* tcstrName = nullptr;
 	}ProcessInformation_t;
 
-	ProcessInformation_t processInformation = ProcessInformation_t{
-		dwId
-	};
+	ProcessInformation_t processInformation = ProcessInformation_t{ dwId };
 
 	utils::process::enumerate(
 		[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
-			ProcessInformation_t& pProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
+			ProcessInformation_t& refProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
 
-			if (refProcessInfo32.th32ProcessID != pProcessInformation.dwRefId) {
+			if (refProcessInfo32.th32ProcessID != refProcessInformation.dwRefId) {
 				return true;
 			}
 
-			_tcscpy_s(
-				pProcessInformation.tcstrName,
-				refProcessInfo32.szExeFile
-			);
+			refProcessInformation.tcstrName = refProcessInfo32.szExeFile;
 
 			return false;
 		},
@@ -230,11 +227,9 @@ bool utils::math::worldToScreen(
 		globals::screen::pModelViewProjectionMatrix[15u]
 	);
 
-	const bool bIsOnScreen = fClipCoordinateW >= 0.1f;
-
-	/*if (fClipCoordinateW < 0.1f) {
+	if (fClipCoordinateW < 0.1f) {
 		return false;
-	}*/
+	}
 
 	const CVector2 vec2NormalizedDeviceCoordinates = CVector2{
 		(
@@ -261,10 +256,5 @@ bool utils::math::worldToScreen(
 		(fHalfScreenHeight + vec2NormalizedDeviceCoordinates.y)
 	};
 
-	if (!bIsOnScreen) {
-		vecRef2Screen.x = -vecRef2Screen.x;
-		vecRef2Screen.y = -vecRef2Screen.y;
-	}
-
-	return bIsOnScreen;
+	return true;
 }

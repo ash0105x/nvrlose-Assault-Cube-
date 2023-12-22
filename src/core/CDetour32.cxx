@@ -56,6 +56,7 @@ CDetour32::~CDetour32(void) noexcept {
 }
 
 [[nodiscard]]
+_Ret_maybenull_
 _Check_return_
 _Success_(return != nullptr)
 const void* const CDetour32::attach(

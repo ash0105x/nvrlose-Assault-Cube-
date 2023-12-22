@@ -63,6 +63,7 @@ public:
 	}
 public:
 	[[nodiscard]]
+	_Ret_maybenull_
 	_Check_return_
 	_Success_(return != nullptr)
 	virtual const void* const attach(

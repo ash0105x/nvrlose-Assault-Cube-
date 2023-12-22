@@ -24,6 +24,7 @@ import CDetour32;
 import signatures;
 import CMenu;
 import CTraceRay;
+import hooks;
 
 import<array>;
 import<tchar.h>;
@@ -37,118 +38,7 @@ import<tchar.h>;
 
 namespace globals {
     static const CRenderer* pRenderer = nullptr;
-
-    namespace hook {
-        static CDetour32* pHealthOpcode = nullptr;
-        static CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>* pShoot = nullptr;
-        static CDetour32* pUnknown = nullptr;
-    }
-
-    namespace jumpBackAddress {
-        static const void* vpHealthOpcode = nullptr;
-        static const void* vpUnknownOpcode = nullptr;
-    }
 }
-
-static void __declspec(naked) hkHealthDecreaseOpcode(void) noexcept {
-#ifdef _DEBUG
-    __asm {
-        mov eax, dword ptr[globals::entity::pLocalPlayer]
-        mov al, byte ptr[eax + 0x01E4u]
-
-        cmp byte ptr[ebx + 0x01E4u - 0xF4u], al
-        jne short notLocalPlayer
-        xor eax, eax
-        jmp dword ptr[globals::jumpBackAddress::vpHealthOpcode]
-    notLocalPlayer:
-        sub dword ptr[ebx + 0x4u], edi
-        mov eax, edi
-        jmp dword ptr[globals::jumpBackAddress::vpHealthOpcode]
-    }
-#endif // _DEBUG
-
-    __asm {
-        // ebx is the defender, but 0xF4 bytes ahead from the playerent base
-
-        // Setting eax to the localPlayer pointer
-        mov eax, dword ptr[globals::entity::pLocalPlayer]
-        // Setting al to the localPlayer's teamID (std::uint8_t)
-        mov al, byte ptr[eax + 0x032Cu]
-        // Comparing the defender's teamID with our's
-        cmp byte ptr[ebx + 0x032Cu - 0xF4u], al
-        // Jump if the defender is an enemy
-        jne short onEnemy
-
-        // Will be executed if the defender is our teammate
-        
-        // Setting the damage taken value to zero.
-        xor eax, eax
-        // Continue original game code execution to prevent crashes
-        jmp dword ptr[globals::jumpBackAddress::vpHealthOpcode]
-    onEnemy:
-        // Will be executed if the defender is an enemy
-        // Setting eax to the current defender's health. eax holds the damage taken value
-        mov eax, dword ptr[ebx + 0x4u]
-        // Setting the defender's health to zero
-        mov dword ptr[ebx + 0x4u], NULL
-        // Continue original game code execution to prevent crashes
-        jmp dword ptr[globals::jumpBackAddress::vpHealthOpcode]
-    }
-}
-
-static void __cdecl setValues(
-    const char* const cstrNickname,
-    const std::uint32_t uDamageGiven,
-    const std::int32_t iHealthRemaining
-) noexcept
-{
-    globals::vecEntitiesHit.emplace_back(
-         std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point> {
-            std::string{ cstrNickname },
-            uDamageGiven,
-            iHealthRemaining,
-            std::chrono::steady_clock::now()
-         }
-    );
-}
-
-static void __declspec(naked) hkUnknown(
-    //const playerent* const pDefender, // ecx
-    //const std::int32_t iDamage, // [ebp + 0x8]
-    //const playerent* const pAttacker, // [ebp + 0xC]
-    //const std::int32_t a4, // [ebp + 0x10]
-    //const bool a5, // [ebp + 0x14]
-    //const bool a6 // [ebp + 0x18]
-) noexcept
-{
-    __asm {
-        push ebp
-        mov ebp, esp
-
-        mov ecx, dword ptr[ebp + 0xC]
-        cmp dword ptr[globals::entity::pLocalPlayer], ecx
-        je onLocalPlayer
-        jmp dword ptr[globals::jumpBackAddress::vpUnknownOpcode]
-    onLocalPlayer:
-        mov ecx, dword ptr[eax + 0xF8]
-        sub ecx, dword ptr[ebp + 0x8]
-
-        push eax
-
-        push ecx
-        push dword ptr[ebp + 0x8]
-        lea ecx, dword ptr[eax + 0x225]
-        push ecx
-
-        call setValues
-        add esp, 0xC
-
-        pop eax
-        jmp dword ptr[globals::jumpBackAddress::vpUnknownOpcode]
-    }
-}
-
-static void hkShoot() noexcept;
 
 static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
@@ -260,17 +150,17 @@ static DWORD CALLBACK MainThread(
     }
 
     try {
-        globals::hook::pHealthOpcode = new std::remove_pointer<decltype(globals::hook::pHealthOpcode)>::type{
+        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode) = new std::remove_pointer<std::remove_reference<decltype(std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode))>::type>::type{
             vpHealthOpCode,
             5u
         };
-  
-        globals::hook::pShoot = new std::remove_pointer<decltype(globals::hook::pShoot)>::type{
+
+        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction) = new std::remove_pointer<std::remove_reference<decltype(std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction))>::type>::type{
             vpShootFunction,
             8u
         };
 
-        globals::hook::pUnknown = new std::remove_pointer<decltype(globals::hook::pUnknown)>::type{
+        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode) = new std::remove_pointer<std::remove_reference<decltype(std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode))>::type>::type{
             vpUnknownFunction,
             6u
         };
@@ -280,9 +170,9 @@ static DWORD CALLBACK MainThread(
     }
 
     if (
-        !(globals::jumpBackAddress::vpHealthOpcode = globals::hook::pHealthOpcode->attach(&::hkHealthDecreaseOpcode)) ||
-        !globals::hook::pShoot->attach(&::hkShoot) ||
-        !(globals::jumpBackAddress::vpUnknownOpcode = globals::hook::pUnknown->attach(&::hkUnknown))
+        !(std::get<HOOK_INDEX::HOOK_INDEX_JUMP_BACK_ADDRESS>(hooks::healthDecreaseOpcode) = std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode)->attach(std::get<HOOK_INDEX::HOOK_INDEX_FUNCTION>(hooks::healthDecreaseOpcode))) ||
+        !std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction)->attach(std::get<HOOK_INDEX::HOOK_INDEX_FUNCTION>(hooks::shootFunction)) ||
+        !(std::get<HOOK_INDEX::HOOK_INDEX_JUMP_BACK_ADDRESS>(hooks::unknownOpcode) = std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode)->attach(std::get<HOOK_INDEX::HOOK_INDEX_FUNCTION>(hooks::unknownOpcode)))
     )
     {
         exit("Failed to instantiate hooks", ERROR_FUNCTION_FAILED);
@@ -366,7 +256,7 @@ BOOL APIENTRY DllMain(
         }
 
         SetThreadDescription(hThread, L"nvrlose client main");
-
+        
         ResumeThread(hThread);
 
         CloseHandle(hThread);
@@ -388,19 +278,19 @@ BOOL APIENTRY DllMain(
             (*globals::function::pPopupMessage)("Exitting...");
         }
 
-        if (globals::hook::pUnknown) {
-            delete globals::hook::pUnknown;
-            delete globals::hook::pShoot;
-            delete globals::hook::pHealthOpcode;
+        if (std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode)) {
+            delete std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode);
+            delete std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction);
+            delete std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode);
             delete globals::pRenderer;
         }
-        else if (globals::hook::pShoot) {
-            delete globals::hook::pShoot;
-            delete globals::hook::pHealthOpcode;
+        else if (std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction)) {
+            delete std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction);
+            delete std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode);
             delete globals::pRenderer;
         }
-        else if (globals::hook::pHealthOpcode) {
-            delete globals::hook::pHealthOpcode;
+        else if (std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode)) {
+            delete std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode);
             delete globals::pRenderer;
         }
         else if (globals::pRenderer) {
@@ -413,49 +303,4 @@ BOOL APIENTRY DllMain(
     }
 
     return TRUE;
-}
-
-static void hkShoot() noexcept {
-    weapon* This = nullptr;
-
-    __asm {
-        mov dword ptr[This], esi
-    }
-
-#ifdef _DEBUG
-    if (globals::entity::pLocalPlayer != This->pOwner) {
-        return;
-    }
-    {
-        const std::uint32_t& uRefInitialAmmo = This->pInitialWeaponData->uAmmo;
-
-        *This->upAmmo = uRefInitialAmmo + 1;
-        *This->upReservedAmmo = uRefInitialAmmo * 2;
-    }
-    return;
-#endif // _DEBUG
-
-    if (globals::entity::pLocalPlayer->uTeamID != This->pOwner->uTeamID) {
-        *This->upAmmo = NULL;
-        *This->upReservedAmmo = NULL;
-
-        return;
-    }
-
-    const std::uint32_t& uRefInitialAmmo = This->pInitialWeaponData->uAmmo;
-
-    *This->upAmmo = uRefInitialAmmo + 1;
-    *This->upReservedAmmo = uRefInitialAmmo * 2;
-
-    if (globals::entity::pLocalPlayer != This->pOwner) {
-        return;
-    }
-
-    globals::vecLocalPlayerShotPositions.emplace_back(
-        std::tuple<CVector3, CVector3, std::chrono::steady_clock::time_point>{
-            globals::entity::pLocalPlayer->vec3EyePosition,
-            *globals::screen::pvec3CurrentWeaponEndTrajectory,
-            std::chrono::steady_clock::now()
-        }
-    );
 }
