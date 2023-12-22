@@ -57,7 +57,7 @@ import<array>;
         return;
     }
 
-	constexpr std::uint8_t WGL_SWAP_BUFFERS_HOOK_LENGTH = 5u;
+	constexpr const std::uint8_t WGL_SWAP_BUFFERS_HOOK_LENGTH = 5u;
 
 	this->m_wglSwapBuffersTrampolineHook32 = CTrampolineHook32{ CRenderer::_p_wglSwapBuffers_gateway, WGL_SWAP_BUFFERS_HOOK_LENGTH };
 
@@ -86,21 +86,23 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
-    class AutoOrtho final {
-    public:
-        [[nodiscard]] explicit AutoOrtho(void) noexcept {
-            gl::setupOrtho();
-        }
-        ~AutoOrtho(void) noexcept {
-            gl::restoreOrtho();
-        }
-    }autoOrtho;
+    gl::setupOrtho();
 
-    constexpr std::uint8_t ARIAL_FONT_HEIGHT = 12;
+    constexpr const std::uint8_t ARIAL_FONT_HEIGHT = 12;
 
     static gl::CFont arial = gl::CFont{ __TEXT("arial"), ARIAL_FONT_HEIGHT, hDC };
 
-    constexpr GLubyte white[4u] = { 255, 255, 255, 255 };
+    constexpr const GLubyte ARR_WHITE[4u] = { 255, 255, 255, 255 };
+
+    arial.drawf(
+        CVector2{
+            0.f,
+            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT - 3)
+        },
+        ARR_WHITE,
+        "Thread Id: %d (0x%xl)",
+        globals::thread::dwId, globals::thread::dwId
+    );
 
     if (!CRenderer::_bCanSafelyRender) {
         constexpr const char cstrInitializingText[] = "Initializing...";
@@ -110,7 +112,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                 0.f,
                 static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - (ARIAL_FONT_HEIGHT * 2) - 3)
             },
-            white,
+            ARR_WHITE,
             cstrInitializingText,
             sizeof(cstrInitializingText)
         );
@@ -120,18 +122,9 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
 
-    arial.drawf(
-        CVector2{
-            0.f,
-            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT)
-        },
-        white,
-        "Thread Id: %d (0x%xl)",
-        globals::thread::dwId,
-        globals::thread::dwId
-    );
-
     const auto renderMenu = [](void) noexcept -> void {
+        gl::restoreOrtho();
+
         CMenu::begin();
         if (CMenu::_bOpen) {
             CMenu::drawMain();
@@ -146,8 +139,46 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     const std::chrono::steady_clock::time_point currentTimePoint = std::chrono::steady_clock::now();
 
+    for (std::size_t i = NULL; i < globals::vecEntitiesHit.size(); ++i) {
+        typedef enum : std::uint8_t {
+            ENTITY_HIT_INDEX_NICK_NAME = NULL,
+            ENTITY_HIT_INDEX_DAMAGE_GIVEN,
+            ENTITY_HIT_INDEX_HEALTH_REMAINING,
+            ENTITY_HIT_INDEX_TIME_STAMP
+        }ENTITY_HIT_INDEX;
+
+        const std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>& refEntityHit = globals::vecEntitiesHit[i];
+
+        if (std::chrono::duration_cast<std::chrono::seconds>(currentTimePoint - std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_TIME_STAMP>(refEntityHit)).count() >= 5) {
+            globals::vecEntitiesHit.erase(globals::vecEntitiesHit.begin() + i);
+            continue;
+        }
+
+        //char cstrInfoMessage[150] = "Hit ";
+        //sprintf_s(
+        //    cstrInfoMessage,
+        //    "%s for %d damage (%d health remaining)",
+        //    std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_NICK_NAME>(refEntityHit).c_str(),
+        //    std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_DAMAGE_GIVEN>(refEntityHit),
+        //    std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_HEALTH_REMAINING>(refEntityHit)
+        //);
+
+        arial.drawCenteredf(
+            CVector2{
+                0.f,
+                static_cast<const float>(100 + (i * arial.getHeight()))
+            },
+            globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH],
+            ARR_WHITE,
+            "Hit %s for %d damage (%d health remaining)",
+            std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_NICK_NAME>(refEntityHit).c_str(),
+            std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_DAMAGE_GIVEN>(refEntityHit),
+            std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_HEALTH_REMAINING>(refEntityHit)
+        );
+    }
+
     for (std::size_t i = NULL; i < globals::vecLocalPlayerShotPositions.size(); ++i) {
-        typedef enum _SHOT_POSITION_INDEX : std::uint8_t {
+        typedef enum : std::uint8_t {
             SHOT_POSITION_INDEX_VEC3_START,
             SHOT_POSITION_INDEX_VEC3_END,
             SHOT_POSITION_INDEX_TIME_STAMP
@@ -169,7 +200,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         gl::drawLineRGBA(
             vec2ShotStartScreenPosition,
             vec2ShotEndScreenPosition,
-            white,
+            ARR_WHITE,
             0.1f
         );
     }
@@ -202,11 +233,11 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         if (modules::visuals::ESP::bToggle || modules::visuals::snaplines::bToggle) {
             CVector2 vec2TargetOriginScreenPosition = CVector2{ };
             if (utils::math::worldToScreen(refCurrentPlayer.vec3Origin, vec2TargetOriginScreenPosition)) {
-                constexpr GLubyte arrTeamHiddenColor[4u] = { NULL, NULL, 255u, 255u };
-                constexpr GLubyte arrTeamVisibleColor[4u] = { NULL, 255u, NULL, 255u };
+                constexpr const GLubyte arrTeamHiddenColor[4u] = { NULL, NULL, 255u, 255u };
+                constexpr const GLubyte arrTeamVisibleColor[4u] = { NULL, 255u, NULL, 255u };
 
-                constexpr GLubyte arrEnemyHiddenColor[4u] = { 255, 255, 255, 255 };
-                constexpr GLubyte arrEnemyVisibleColor[4u] = { 255, NULL, NULL, 255 };
+                constexpr const GLubyte arrEnemyHiddenColor[4u] = { 255, 255, 255, 255 };
+                constexpr const GLubyte arrEnemyVisibleColor[4u] = { 255, NULL, NULL, 255 };
 
                 const GLubyte(&arrColor)[4u] = (
                     refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID ?
@@ -270,7 +301,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             // opp. / adj.
             atan2f(vec3Delta.y, vec3Delta.x) * CVector3::fDegreesRadiansConversionValue + 90.f,
             // opp. / hyp.
-            (vec3Delta.z / fPlayerDistanceToLocalPlayer) * CVector3::fDegreesRadiansConversionValue
+            asinf(vec3Delta.z / fPlayerDistanceToLocalPlayer) * CVector3::fDegreesRadiansConversionValue
         };
     }
 

@@ -1,4 +1,5 @@
 #include<Windows.h>
+#include<TlHelp32.h>
 
 export module utils;
 
@@ -12,6 +13,8 @@ import<cassert>;
 import CVector2;
 import CVector3;
 
+import signatures;
+
 export namespace utils {
 	namespace memory {
 		template<std::size_t t_patternLength>
@@ -19,10 +22,9 @@ export namespace utils {
 		_Must_inspect_result_
 		_Ret_maybenull_
 		_Success_(return != nullptr)
-		std::uint8_t* const findSignature(
+		constexpr std::uint8_t* const findSignature(
 			_In_ const HMODULE hModule,
-			_In_z_ const BYTE(&pattern)[t_patternLength],
-			_In_z_ const char(&cstrMask)[t_patternLength]
+			_In_ const SignatureData_t<t_patternLength>& signatureData
 		) noexcept
 		{
 			assert(
@@ -50,8 +52,8 @@ export namespace utils {
 			for (std::uint8_t* pBase = reinterpret_cast<std::uint8_t* const>(hModule); pBase < comparableModuleEnd; ++pBase) {
 				for (std::uintptr_t patternComparisonPointer = NULL; patternComparisonPointer < t_patternLength; ++patternComparisonPointer) {
 					if (
-						'x' == cstrMask[patternComparisonPointer] &&
-						pattern[patternComparisonPointer] != pBase[patternComparisonPointer]
+						'x' == std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_MASK>(signatureData)[patternComparisonPointer] &&
+						pBase[patternComparisonPointer] != std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_PATTERN>(signatureData)[patternComparisonPointer]
 					)
 					{
 						goto invalidPattern;
@@ -110,6 +112,29 @@ export namespace utils {
 		) noexcept;
 	}
 
+	namespace process {
+		bool enumerate(
+			_In_ bool(* const& pRefEnumFunction)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept,
+			_In_opt_ void* const vpExtraParameter
+		) noexcept;
+
+		[[nodiscard]]
+		_Check_return_
+		_Success_(return == true)
+		bool isRunning(
+			_In_z_ const TCHAR* const tcstrProcessName
+		) noexcept;
+
+		[[nodiscard]]
+		_Check_return_
+		_Ret_maybenull_z_
+		_Ret_z_
+		_Success_(return != nullptr)
+		const TCHAR* name(
+			_In_ const DWORD dwId
+		) noexcept;
+	}
+
 	namespace math {
 		bool worldToScreen(
 			_In_ const CVector3& vec3RefWorld,
@@ -118,11 +143,13 @@ export namespace utils {
 	}
 
 	namespace x86asm {
-		constexpr std::uint8_t jmp = 0xE9u;
-		constexpr std::uint8_t pushad = 0x60u;
-		constexpr std::uint8_t pushfd = 0x9Cu;
-		constexpr std::uint8_t call = 0xE8u;
-		constexpr std::uint8_t popfd = 0x9Du;
-		constexpr std::uint8_t popad = 0x61u;
+		constexpr const std::uint8_t jmp = 0xE9u;
+		constexpr const std::uint8_t call = 0xE8u;
+
+		constexpr const std::uint8_t pushad = 0x60u;
+		constexpr const std::uint8_t pushfd = 0x9Cu;
+
+		constexpr const std::uint8_t popad = 0x61u;
+		constexpr const std::uint8_t popfd = 0x9Du;
 	}
 }

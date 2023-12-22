@@ -4,9 +4,12 @@ import utils;
 //import <iostream>;
 
 #include<Windows.h>
+#include<TlHelp32.h>
 
 #include<iostream>
 #include<assert.h>
+
+import<tchar.h>;
 
 import globals;
 
@@ -23,10 +26,14 @@ bool utils::memory::isExecutableRegion(
 	RtlZeroMemory(&memoryRegionInformation, sizeof(MEMORY_BASIC_INFORMATION));
 
 	return(
-		VirtualQuery(
-			vpMemoryRegion,
-			&memoryRegionInformation,
-			sizeof(MEMORY_BASIC_INFORMATION)
+		(
+			(
+				VirtualQuery(
+					vpMemoryRegion,
+					&memoryRegionInformation,
+					sizeof(MEMORY_BASIC_INFORMATION)
+				)
+			) >= (offsetof(MEMORY_BASIC_INFORMATION, Protect) + sizeof(MEMORY_BASIC_INFORMATION::Protect))
 		) &&
 		memoryRegionInformation.Protect &
 		(
@@ -47,7 +54,13 @@ bool utils::memory::detour32(
 	_In_ const std::size_t length
 ) noexcept
 {
-	assert(bypAddress && bypNewFunction && length >= 5u);
+	assert(
+		bypAddress &&
+		utils::memory::isExecutableRegion(bypAddress) &&
+		bypNewFunction &&
+		utils::memory::isExecutableRegion(bypNewFunction) &&
+		length >= 5u
+	);
 
 	DWORD dwPreviousProtection = NULL;
 	if (
@@ -63,6 +76,7 @@ bool utils::memory::detour32(
 	}
 
 	const std::ptrdiff_t ptrRelativeOffset = utils::memory::calculateRelativeOffset(bypAddress, bypNewFunction);
+
 	bypAddress[NULL] = utils::x86asm::jmp;
 	*reinterpret_cast<DWORD* const>(bypAddress + 1u) = ptrRelativeOffset;
 
@@ -88,6 +102,122 @@ std::ptrdiff_t utils::memory::calculateRelativeOffset(
 	return static_cast<const std::ptrdiff_t>(pTo - pFrom - 5u);
 }
 
+bool utils::process::enumerate(
+	_In_ bool(* const& pRefEnumFunction)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept,
+	_In_opt_ void* const vpExtraParameter
+) noexcept
+{
+	const HANDLE hProcessSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+	if (INVALID_HANDLE_VALUE == hProcessSnapshot) {
+		return false;
+	}
+
+	PROCESSENTRY32 processInfo32 = PROCESSENTRY32{ };
+	RtlZeroMemory(&processInfo32, sizeof(PROCESSENTRY32));
+	processInfo32.dwSize = sizeof(PROCESSENTRY32);
+
+	const auto safeExit = [&hProcessSnapshot](const bool bReturnValue) noexcept -> bool {
+		CloseHandle(hProcessSnapshot);
+
+		return bReturnValue;
+	};
+
+	if (!Process32First(hProcessSnapshot, &processInfo32)) {
+		return safeExit(false);
+	}
+
+	do {
+		if (!((*pRefEnumFunction)(processInfo32, vpExtraParameter))) {
+			break;
+		}
+	} while (Process32Next(hProcessSnapshot, &processInfo32));
+
+	return safeExit(true);
+}
+
+[[nodiscard]]
+_Check_return_
+_Success_(return == true)
+bool utils::process::isRunning(
+	_In_z_ const TCHAR* const tcstrProcessName
+) noexcept
+{
+	assert(
+		tcstrProcessName &&
+		tcstrProcessName[NULL] != __TEXT('\0') &&
+		_tcslen(tcstrProcessName) < sizeof(PROCESSENTRY32::szExeFile)
+	);
+
+	typedef struct ProcessInformation {
+		const TCHAR* const& tcstrRefProcessName = nullptr;
+		bool bIsRunning = false;
+	}ProcessInformation_t;
+
+	ProcessInformation_t processInformation = ProcessInformation_t{
+		tcstrProcessName,
+		false
+	};
+
+	return(
+		utils::process::enumerate(
+			[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
+				ProcessInformation_t& pProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
+
+				if (NULL != _tcscmp(pProcessInformation.tcstrRefProcessName, refProcessInfo32.szExeFile)) {
+					return true;
+				}
+
+				pProcessInformation.bIsRunning = true;
+				return false;
+			},
+			&processInformation
+		) &&
+		processInformation.bIsRunning
+	);
+}
+
+[[nodiscard]]
+_Check_return_
+_Ret_maybenull_z_
+_Ret_z_
+_Success_(return != nullptr)
+const TCHAR* utils::process::name(
+	_In_ const DWORD dwId
+) noexcept
+{
+	assert(dwId);
+
+	typedef struct ProcessInformation {
+		const DWORD& dwRefId = NULL;
+		TCHAR tcstrName[MAX_PATH] = { __TEXT('\0') };
+	}ProcessInformation_t;
+
+	ProcessInformation_t processInformation = ProcessInformation_t{
+		dwId
+	};
+
+	utils::process::enumerate(
+		[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
+			ProcessInformation_t& pProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
+
+			if (refProcessInfo32.th32ProcessID != pProcessInformation.dwRefId) {
+				return true;
+			}
+
+			_tcscpy_s(
+				pProcessInformation.tcstrName,
+				refProcessInfo32.szExeFile
+			);
+
+			return false;
+		},
+		&processInformation
+	);
+
+	return processInformation.tcstrName;
+}
+
 bool utils::math::worldToScreen(
 	_In_ const CVector3& vec3RefWorld,
 	_Out_ CVector2& vecRef2Screen
@@ -100,9 +230,11 @@ bool utils::math::worldToScreen(
 		globals::screen::pModelViewProjectionMatrix[15u]
 	);
 
-	if (fClipCoordinateW < 0.1f) {
+	const bool bIsOnScreen = fClipCoordinateW >= 0.1f;
+
+	/*if (fClipCoordinateW < 0.1f) {
 		return false;
-	}
+	}*/
 
 	const CVector2 vec2NormalizedDeviceCoordinates = CVector2{
 		(
@@ -119,8 +251,8 @@ bool utils::math::worldToScreen(
 		) / fClipCoordinateW
 	};
 
-	const float fHalfScreenWidth = static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH] / 2u);
-	const float fHalfScreenHeight = static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] / 2u);
+	const float fHalfScreenWidth = static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]) / 2.f;
+	const float fHalfScreenHeight = static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT]) / 2.f;
 
 	vecRef2Screen = CVector2{
 		(fHalfScreenWidth * vec2NormalizedDeviceCoordinates.x) +
@@ -129,5 +261,10 @@ bool utils::math::worldToScreen(
 		(fHalfScreenHeight + vec2NormalizedDeviceCoordinates.y)
 	};
 
-	return true;
+	if (!bIsOnScreen) {
+		vecRef2Screen.x = -vecRef2Screen.x;
+		vecRef2Screen.y = -vecRef2Screen.y;
+	}
+
+	return bIsOnScreen;
 }

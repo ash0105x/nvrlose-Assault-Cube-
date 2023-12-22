@@ -28,7 +28,7 @@ public:
 		CVector2&&
 	) noexcept = default;
 public:
-	constexpr auto operator<=>(
+	constexpr const auto operator<=>(
 		_In_ const CVector2&
 	) const noexcept = default;
 public:

@@ -27,48 +27,102 @@ void modules::visuals::ESP::onToggle(
         return;
     }
 
-    std::int32_t uAdjustedWidth = static_cast<const std::int32_t>(globals::entity::pLocalPlayer->vec3EyePosition.distance(refTarget.vec3EyePosition));
+    float uAdjustedWidth = globals::entity::pLocalPlayer->vec3EyePosition.distance(refTarget.vec3EyePosition);
 
     if (!uAdjustedWidth) {
         return;
     }
 
-    uAdjustedWidth = 300 / uAdjustedWidth;
+    uAdjustedWidth = 300.f / uAdjustedWidth;
 
-    const std::int32_t xPosition = static_cast<const std::int32_t>(vec2TargetEyeScreenPosition.x) - uAdjustedWidth;
-    const std::int32_t xPositionRight = xPosition + (uAdjustedWidth * 2);
+    const float xPosition = vec2TargetEyeScreenPosition.x - uAdjustedWidth;
+    const float yPosition = vec2TargetEyeScreenPosition.y + uAdjustedWidth;
 
-    const std::int32_t yPosition = static_cast<const std::int32_t>(vec2TargetEyeScreenPosition.y) + uAdjustedWidth;
+    const float xPositionRight = xPosition + static_cast<const float>(uAdjustedWidth * 2);
 
-    //const float fPadding = static_cast<const float>(uAdjustedWidth) / 1.f;
     const float fPadding = static_cast<const float>(font.getHeight());
 
-    constexpr GLubyte white[4] = { 255, 255, 255, 255 };
+    constexpr const GLubyte white[4] = { 255, 255, 255, 255 };
 
     const char* const& cstrRefTargetNickName = refTarget.cstrNickname;
 
     font.drawCentered(
         CVector2{
-            static_cast<const float>(xPosition),
-            static_cast<const float>(yPosition) + fPadding + 3.f
+            xPosition,
+            yPosition + fPadding + 3.f
         },
-        static_cast<const float>(xPositionRight),
+        xPositionRight,
         white,
         cstrRefTargetNickName,
         strlen(cstrRefTargetNickName)
     );
 
-    if (refTarget.pCurrentWeapon) {
-        const char* const& cstrRefTargetCurrentWeaponName = refTarget.pCurrentWeapon->pInitialWeaponData->cstrName;
+    const float fFontHeight = static_cast<const float>(font.getHeight());
 
+    constexpr const float BAR_LINE_WIDTH = 4.f;
+    constexpr const float OUT_LINE_WIDTH = 1.f;
+
+    constexpr const GLubyte ARR_BLACK [3u] = { NULL, NULL, NULL };
+    constexpr const GLubyte ARR_GREY[3] = { 128u, 128u, 128u };
+
+    if (refTarget.pCurrentWeapon) {
         CVector2 vec2WeaponInfoPosition = CVector2{
-            static_cast<const float>(xPosition),
+            xPosition,
             vec2TargetOriginScreenPosition.y - fPadding - 3.f
         };
 
-        font.drawCentered(
+        constexpr const GLubyte ARR_WHITE[3] = { 255, 255, 255 };
+
+        const CVector2 vec2AmmoBarEndPosition = CVector2{
+            vec2WeaponInfoPosition.x +
+            (
+                (xPositionRight - vec2WeaponInfoPosition.x) *
+                (
+                    static_cast<const float>(*refTarget.pCurrentWeapon->upAmmo) /
+                    static_cast<const float>(refTarget.pCurrentWeapon->pInitialWeaponData->uAmmo)
+                )
+            ),
+            vec2WeaponInfoPosition.y
+        };
+
+        gl::drawLineRGB(
             vec2WeaponInfoPosition,
-            static_cast<const float>(xPositionRight),
+            vec2AmmoBarEndPosition,
+            ARR_WHITE,
+            BAR_LINE_WIDTH
+        );
+
+        gl::drawLineRGB(
+            vec2WeaponInfoPosition,
+            CVector2{
+                xPositionRight,
+                vec2WeaponInfoPosition.y
+            },
+            ARR_GREY,
+            BAR_LINE_WIDTH
+        );
+
+        gl::drawLineRGB(
+            CVector2{
+                vec2WeaponInfoPosition.x - (BAR_LINE_WIDTH / 2),
+                vec2WeaponInfoPosition.y
+            },
+            CVector2{
+                xPositionRight + (BAR_LINE_WIDTH / 2),
+                vec2WeaponInfoPosition.y
+            },
+            ARR_BLACK,
+            OUT_LINE_WIDTH
+        );
+
+        const char* const& cstrRefTargetCurrentWeaponName = refTarget.pCurrentWeapon->pInitialWeaponData->cstrName;
+
+        font.drawCentered(
+            CVector2{
+                vec2WeaponInfoPosition.x,
+                vec2WeaponInfoPosition.y - (2.f * fPadding) - 3.f
+            },
+            xPositionRight,
             white,
             cstrRefTargetCurrentWeaponName,
             strlen(cstrRefTargetCurrentWeaponName)
@@ -76,18 +130,29 @@ void modules::visuals::ESP::onToggle(
 
         vec2WeaponInfoPosition.y -= (font.getHeight() * 2);
 
-        font.drawCenteredf(
-            vec2WeaponInfoPosition,
-            static_cast<const float>(xPositionRight),
+        char cstrAmmoBuffer[10] = { };
+
+        sprintf_s(
+            cstrAmmoBuffer,
+            "%d",
+            *refTarget.pCurrentWeapon->upAmmo
+        );
+
+        const size_t ammoStringLength = strlen(cstrAmmoBuffer);
+
+        font.draw(
+            CVector2{
+                vec2AmmoBarEndPosition.x - ((static_cast<const float>(ammoStringLength) * fFontHeight) / 2.f),
+                vec2AmmoBarEndPosition.y
+            },
             white,
-            "%d / %d",
-            *refTarget.pCurrentWeapon->upAmmo,
-            refTarget.pCurrentWeapon->pInitialWeaponData->uAmmo
+            cstrAmmoBuffer,
+            ammoStringLength
         );
     }
 
-    const float fHealthBarPositionX = static_cast<const float>(xPosition) - fPadding;
-    const float fHealthBarEndPositionY = vec2TargetOriginScreenPosition.y - ((vec2TargetOriginScreenPosition.y - static_cast<const float>(yPosition)) * (static_cast<const float>(refTarget.iHealth) / 100.f));
+    const float fHealthBarPositionX = xPosition - fPadding - 3.f;
+    const float fHealthBarEndPositionY = vec2TargetOriginScreenPosition.y - ((vec2TargetOriginScreenPosition.y - yPosition) * (static_cast<const float>(refTarget.iHealth) / 100.f));
 
     char cstrHealthBuffer[10] = { };
 
@@ -101,7 +166,7 @@ void modules::visuals::ESP::onToggle(
 
     font.draw(
         CVector2{
-            fHealthBarPositionX - (static_cast<const float>(healthStringLength * font.getHeight()) / 2.f),
+            fHealthBarPositionX - ((static_cast<const float>(healthStringLength) * fFontHeight) / 2.f),
             fHealthBarEndPositionY
         },
         white,
@@ -120,71 +185,31 @@ void modules::visuals::ESP::onToggle(
 
     glBegin(GL_LINE_LOOP);
 
-    glVertex2i(
+    glVertex2f(
         xPosition,
         yPosition
     );
 
-    glVertex2i(
+    glVertex2f(
         xPositionRight,
         yPosition
     );
 
-    glVertex2i(
+    glVertex2f(
         xPositionRight,
-        static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
+        vec2TargetOriginScreenPosition.y
     );
 
-    glVertex2i(
+    glVertex2f(
         xPosition,
-        static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
-    );
-
-    glEnd();
-
-    // Black outlined esp box
-    glLineWidth(4.f);
-    glColor4ub(
-        NULL,
-        NULL,
-        NULL,
-        NULL
-    );
-
-    glBegin(GL_LINE_LOOP);
-
-    glVertex2i(
-        xPosition,
-        yPosition
-    );
-
-    glVertex2i(
-        xPositionRight,
-        yPosition
-    );
-
-    glVertex2i(
-        xPositionRight,
-        static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
-    );
-
-    glVertex2i(
-        xPosition,
-        static_cast<const GLint>(vec2TargetOriginScreenPosition.y)
+        vec2TargetOriginScreenPosition.y
     );
 
     glEnd();
 
     // Colored esp health bar
     
-    const GLubyte playerHealthColorValue = static_cast<const GLubyte>(refTarget.iHealth * 2.25f);
-
-    glColor4ub(
-        255u - playerHealthColorValue,
-        playerHealthColorValue,
-        NULL,
-        255u
-    );
+    const GLubyte playerHealthColorValue = static_cast<const GLubyte>(static_cast<const float>(refTarget.iHealth) * 2.25f);
 
     const GLubyte playerHealthColor[4] = {
         255u - playerHealthColorValue,
@@ -203,16 +228,10 @@ void modules::visuals::ESP::onToggle(
             fHealthBarEndPositionY
         },
         playerHealthColor,
-        0.1f
+        BAR_LINE_WIDTH
     );
 
     // grey esp health bar
-
-    constexpr GLubyte arrGrey[3] = {
-        128u,
-        128u,
-        128u
-    };
 
     gl::drawLineRGB(
         CVector2{
@@ -223,22 +242,20 @@ void modules::visuals::ESP::onToggle(
             fHealthBarPositionX,
             vec2TargetOriginScreenPosition.y
         },
-        arrGrey,
-        0.1f
+        ARR_GREY,
+        BAR_LINE_WIDTH
     );
-
-    constexpr GLubyte arrBlack[3u] = { NULL, NULL, NULL };
 
     gl::drawLineRGB(
         CVector2{
             fHealthBarPositionX,
-            static_cast<const float>(yPosition) + 1.f
+            yPosition + (BAR_LINE_WIDTH / 2.f)
         },
         CVector2{
             fHealthBarPositionX,
-            vec2TargetOriginScreenPosition.y - 1.f
+            vec2TargetOriginScreenPosition.y - (BAR_LINE_WIDTH / 2.f)
         },
-        arrBlack,
-        4.f
+        ARR_BLACK,
+        OUT_LINE_WIDTH
     );
 }

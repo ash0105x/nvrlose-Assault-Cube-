@@ -168,14 +168,14 @@ LRESULT CALLBACK CMenu::hk_WndProc(
 }
 
 void CMenu::drawMain(void) noexcept {
-    constexpr char cstrClientName[] = (
+    constexpr const char cstrClientName[] = (
         "nvrlose client"
 #ifdef _DEBUG
         " (dev build)"
 #endif // _DEBUG
     );
 
-    if (!ImGui::Begin(cstrClientName, nullptr, NULL)) {
+    if (!ImGui::Begin(cstrClientName)) {
         ImGui::End();
         return;
     }

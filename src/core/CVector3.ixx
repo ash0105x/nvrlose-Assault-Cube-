@@ -33,7 +33,7 @@ public:
 		CVector3&&
 	) noexcept = default;
 public:
-	constexpr auto operator<=>(
+	constexpr const auto operator<=>(
 		_In_ const CVector3&
 	) const noexcept = default;
 public:
@@ -87,9 +87,22 @@ public:
 		_In_ const CVector3&
 	) noexcept;
 public:
-	inline static constexpr float fDegreesRadiansConversionValue = static_cast<const float>(180.0 / 3.14159265358979323846); // pi;
+	inline static constexpr const float fDegreesRadiansConversionValue = static_cast<const float>(180.0 / 3.14159265358979323846); // pi;
 public:
-	float x = 0.f;
-	float y = 0.f;
-	float z = 0.f;
+	union {
+		struct {
+			float x;
+
+			union {
+				struct {
+					float y;
+					float z;
+				};
+
+				CVector2 yz;
+			};
+		};
+		
+		CVector2 xy;
+	};
 };

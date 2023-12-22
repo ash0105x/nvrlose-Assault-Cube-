@@ -77,8 +77,7 @@ export namespace gl {
 	private:
 		static HFONT createFontHelper(
 			_In_z_ const TCHAR* const tcstrName,
-			_In_ const long lHeight,
-			_In_ const HDC hDC
+			_In_ const long lHeight
 		) noexcept;
 	private:
 		GLuint m_iBase = NULL;

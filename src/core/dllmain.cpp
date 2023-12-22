@@ -36,19 +36,37 @@ import<tchar.h>;
 #include<tuple>
 
 namespace globals {
-    static CRenderer* pRenderer = nullptr;
+    static const CRenderer* pRenderer = nullptr;
 
     namespace hook {
         static CDetour32* pHealthOpcode = nullptr;
         static CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>* pShoot = nullptr;
+        static CDetour32* pUnknown = nullptr;
     }
 
     namespace jumpBackAddress {
         static const void* vpHealthOpcode = nullptr;
+        static const void* vpUnknownOpcode = nullptr;
     }
 }
 
 static void __declspec(naked) hkHealthDecreaseOpcode(void) noexcept {
+#ifdef _DEBUG
+    __asm {
+        mov eax, dword ptr[globals::entity::pLocalPlayer]
+        mov al, byte ptr[eax + 0x01E4u]
+
+        cmp byte ptr[ebx + 0x01E4u - 0xF4u], al
+        jne short notLocalPlayer
+        xor eax, eax
+        jmp dword ptr[globals::jumpBackAddress::vpHealthOpcode]
+    notLocalPlayer:
+        sub dword ptr[ebx + 0x4u], edi
+        mov eax, edi
+        jmp dword ptr[globals::jumpBackAddress::vpHealthOpcode]
+    }
+#endif // _DEBUG
+
     __asm {
         // ebx is the defender, but 0xF4 bytes ahead from the playerent base
 
@@ -57,7 +75,7 @@ static void __declspec(naked) hkHealthDecreaseOpcode(void) noexcept {
         // Setting al to the localPlayer's teamID (std::uint8_t)
         mov al, byte ptr[eax + 0x032Cu]
         // Comparing the defender's teamID with our's
-        cmp byte ptr[ebx + 0x238u], al
+        cmp byte ptr[ebx + 0x032Cu - 0xF4u], al
         // Jump if the defender is an enemy
         jne short onEnemy
 
@@ -78,37 +96,59 @@ static void __declspec(naked) hkHealthDecreaseOpcode(void) noexcept {
     }
 }
 
-static void hkShoot() noexcept {
-    weapon* This = nullptr;
-
-    __asm {
-        mov dword ptr[This], esi
-    }
-
-    if (globals::entity::pLocalPlayer->uTeamID != This->pOwner->uTeamID) {
-        *This->upAmmo = NULL;
-        *This->upReservedAmmo = NULL;
-
-        return;
-    }
-
-    const std::uint32_t& uRefInitialAmmo = This->pInitialWeaponData->uAmmo;
-
-    *This->upAmmo = uRefInitialAmmo + 1;
-    *This->upReservedAmmo = uRefInitialAmmo * 2;
-
-    if (globals::entity::pLocalPlayer != This->pOwner) {
-        return;
-    }
-
-    globals::vecLocalPlayerShotPositions.emplace_back(
-        std::tuple<CVector3, CVector3, std::chrono::steady_clock::time_point>{
-            globals::entity::pLocalPlayer->vec3EyePosition,
-            *globals::screen::pvec3CurrentWeaponEndTrajectory,
+static void __cdecl setValues(
+    const char* const cstrNickname,
+    const std::uint32_t uDamageGiven,
+    const std::int32_t iHealthRemaining
+) noexcept
+{
+    globals::vecEntitiesHit.emplace_back(
+         std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point> {
+            std::string{ cstrNickname },
+            uDamageGiven,
+            iHealthRemaining,
             std::chrono::steady_clock::now()
-        }
+         }
     );
 }
+
+static void __declspec(naked) hkUnknown(
+    //const playerent* const pDefender, // ecx
+    //const std::int32_t iDamage, // [ebp + 0x8]
+    //const playerent* const pAttacker, // [ebp + 0xC]
+    //const std::int32_t a4, // [ebp + 0x10]
+    //const bool a5, // [ebp + 0x14]
+    //const bool a6 // [ebp + 0x18]
+) noexcept
+{
+    __asm {
+        push ebp
+        mov ebp, esp
+
+        mov ecx, dword ptr[ebp + 0xC]
+        cmp dword ptr[globals::entity::pLocalPlayer], ecx
+        je onLocalPlayer
+        jmp dword ptr[globals::jumpBackAddress::vpUnknownOpcode]
+    onLocalPlayer:
+        mov ecx, dword ptr[eax + 0xF8]
+        sub ecx, dword ptr[ebp + 0x8]
+
+        push eax
+
+        push ecx
+        push dword ptr[ebp + 0x8]
+        lea ecx, dword ptr[eax + 0x225]
+        push ecx
+
+        call setValues
+        add esp, 0xC
+
+        pop eax
+        jmp dword ptr[globals::jumpBackAddress::vpUnknownOpcode]
+    }
+}
+
+static void hkShoot() noexcept;
 
 static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
@@ -145,8 +185,7 @@ static DWORD CALLBACK MainThread(
             globals::function::pPopupMessage = reinterpret_cast<const globals::function::definition::_popupMessage_t>(
                 utils::memory::findSignature(
                     reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-                    signatures::function::popupMessage.pattern,
-                    signatures::function::popupMessage.cstrMask
+                    signatures::function::popupMessage
                 )
             )
         )
@@ -168,8 +207,7 @@ static DWORD CALLBACK MainThread(
             CTraceRay::_pTraceLineFn = reinterpret_cast<const CTraceRay::_traceLine_t>(
                 utils::memory::findSignature(
                     reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-                    signatures::function::traceLine.pattern,
-                    signatures::function::traceLine.cstrMask
+                    signatures::function::traceLine
                 )
             )
         ) ||
@@ -177,8 +215,7 @@ static DWORD CALLBACK MainThread(
             CTraceRay::_pIsVisibleFn = reinterpret_cast<const CTraceRay::_entityIsVisible_t>(
                 utils::memory::findSignature(
                     reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-                    signatures::function::isVisible.pattern,
-                    signatures::function::isVisible.cstrMask
+                    signatures::function::isVisible
                 )
             )
         ) ||
@@ -186,8 +223,7 @@ static DWORD CALLBACK MainThread(
             CTraceRay::_pIntersectFn = reinterpret_cast<const CTraceRay::_intersect_t>(
                 utils::memory::findSignature(
                     reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-                    signatures::function::intersect.pattern,
-                    signatures::function::intersect.cstrMask
+                    signatures::function::intersect
                 )
             )
         )
@@ -196,10 +232,18 @@ static DWORD CALLBACK MainThread(
         exit("Failed to find functions", ERROR_NOT_FOUND);
     }
 
+    void* const vpUnknownFunction = utils::memory::findSignature(
+        reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
+        signatures::function::unknown
+    );
+
+    if (!vpUnknownFunction) {
+        exit("Failed to fund unknown function lol", ERROR_NOT_FOUND);
+    }
+
     void* const vpHealthOpCode = utils::memory::findSignature(
         reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-        signatures::code::health.pattern,
-        signatures::code::health.cstrMask
+        signatures::code::health
     );
 
     if (!vpHealthOpCode) {
@@ -208,8 +252,7 @@ static DWORD CALLBACK MainThread(
 
     void* const vpShootFunction = utils::memory::findSignature(
         reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-        signatures::function::shoot.pattern,
-        signatures::function::shoot.cstrMask
+        signatures::function::shoot
     );
 
     if (!vpShootFunction) {
@@ -221,10 +264,15 @@ static DWORD CALLBACK MainThread(
             vpHealthOpCode,
             5u
         };
-
+  
         globals::hook::pShoot = new std::remove_pointer<decltype(globals::hook::pShoot)>::type{
             vpShootFunction,
             8u
+        };
+
+        globals::hook::pUnknown = new std::remove_pointer<decltype(globals::hook::pUnknown)>::type{
+            vpUnknownFunction,
+            6u
         };
     }
     catch (const std::bad_alloc&) {
@@ -233,7 +281,8 @@ static DWORD CALLBACK MainThread(
 
     if (
         !(globals::jumpBackAddress::vpHealthOpcode = globals::hook::pHealthOpcode->attach(&::hkHealthDecreaseOpcode)) ||
-        !globals::hook::pShoot->attach(&::hkShoot)
+        !globals::hook::pShoot->attach(&::hkShoot) ||
+        !(globals::jumpBackAddress::vpUnknownOpcode = globals::hook::pUnknown->attach(&::hkUnknown))
     )
     {
         exit("Failed to instantiate hooks", ERROR_FUNCTION_FAILED);
@@ -256,26 +305,53 @@ BOOL APIENTRY DllMain(
     _In_ [[maybe_unused]] const void* const lpvReserved
 ) noexcept
 {
-    static TCHAR tcstrErrorMessage[125] = { __TEXT('\0') };
+    constexpr const std::uint8_t MAX_ERROR_MESSAGE_LENGTH = 200;
+    static TCHAR tcstrErrorMessage[MAX_ERROR_MESSAGE_LENGTH] = { __TEXT('\0') };
 
-    if (DLL_PROCESS_ATTACH == fdwReason) {
-        const auto setError = [](const TCHAR* const tcstrError) noexcept -> void {
+    switch (fdwReason) {
+    case DLL_PROCESS_ATTACH:
+    {
+        typedef std::remove_all_extents<decltype(tcstrErrorMessage)>::type errorType_t;
+
+        const auto exit = [&hInstDLL](const errorType_t* const tcstrError) noexcept -> __declspec(noreturn) void {
+            assert(
+                tcstrError &&
+                tcstrError[NULL] != __TEXT('\0') &&
+                _tcslen(tcstrError) < MAX_ERROR_MESSAGE_LENGTH
+            );
+
+            const DWORD dwLastError = GetLastError();
+
+            constexpr const errorType_t* const ERROR_MESSAGE_FORMAT = (
+                std::_Is_character<errorType_t>::value ?
+                __TEXT("%s! Error code: %d (0x%lx)") :
+                __TEXT("%ls! Error code: %d (0x%lx)")
+            );
+
             _stprintf_s(
                 tcstrErrorMessage,
+                MAX_ERROR_MESSAGE_LENGTH,
+                ERROR_MESSAGE_FORMAT,
                 tcstrError,
-                GetLastError()
+                dwLastError,
+                dwLastError
             );
+
+            FreeLibrary(hInstDLL);
         };
 
         if(!globals::modules::ac_client_exe) {
-            setError(__TEXT("Failed to retrieve module \"ac_client.exe\". This can happen when you inject me into the wrong process! Error code: %d"));
-
-            FreeLibrary(hInstDLL);
-            return TRUE;
+            exit(
+                (
+                    __TEXT("Failed to retrieve module \"ac_client.exe\" because you injected me into \"") +
+                    std::basic_string<TCHAR>{ utils::process::name(GetCurrentProcessId()) } +
+                    __TEXT("\" instead of Assault Cube (ac_client.exe)")
+                ).c_str()
+            );
         }
 
         DisableThreadLibraryCalls(hInstDLL);
-        
+
         const HANDLE hThread = CreateThread(
             nullptr,
             NULL,
@@ -286,10 +362,7 @@ BOOL APIENTRY DllMain(
         );
 
         if (!hThread) {
-            setError(__TEXT("Failed to create a seperate thread to fully instantiate the cheat! Error code: %d"));
-            
-            FreeLibrary(hInstDLL);
-            return TRUE;
+            exit(__TEXT("Failed to create a seperate thread to fully instantiate the cheat"));
         }
 
         SetThreadDescription(hThread, L"nvrlose client main");
@@ -298,12 +371,14 @@ BOOL APIENTRY DllMain(
 
         CloseHandle(hThread);
     }
-    else if (DLL_PROCESS_DETACH == fdwReason) {
+        break;
+    case DLL_PROCESS_DETACH:
+    {
         if (tcstrErrorMessage[NULL] != __TEXT('\0')) {
             MessageBox(
                 nullptr,
-                __TEXT("Error!"),
                 tcstrErrorMessage,
+                __TEXT("Error!"),
                 (MB_OK | MB_ICONERROR)
             );
             return TRUE;
@@ -313,7 +388,13 @@ BOOL APIENTRY DllMain(
             (*globals::function::pPopupMessage)("Exitting...");
         }
 
-        if (globals::hook::pShoot) {
+        if (globals::hook::pUnknown) {
+            delete globals::hook::pUnknown;
+            delete globals::hook::pShoot;
+            delete globals::hook::pHealthOpcode;
+            delete globals::pRenderer;
+        }
+        else if (globals::hook::pShoot) {
             delete globals::hook::pShoot;
             delete globals::hook::pHealthOpcode;
             delete globals::pRenderer;
@@ -326,6 +407,55 @@ BOOL APIENTRY DllMain(
             delete globals::pRenderer;
         }
     }
+        break;
+    default:
+        break;
+    }
 
     return TRUE;
+}
+
+static void hkShoot() noexcept {
+    weapon* This = nullptr;
+
+    __asm {
+        mov dword ptr[This], esi
+    }
+
+#ifdef _DEBUG
+    if (globals::entity::pLocalPlayer != This->pOwner) {
+        return;
+    }
+    {
+        const std::uint32_t& uRefInitialAmmo = This->pInitialWeaponData->uAmmo;
+
+        *This->upAmmo = uRefInitialAmmo + 1;
+        *This->upReservedAmmo = uRefInitialAmmo * 2;
+    }
+    return;
+#endif // _DEBUG
+
+    if (globals::entity::pLocalPlayer->uTeamID != This->pOwner->uTeamID) {
+        *This->upAmmo = NULL;
+        *This->upReservedAmmo = NULL;
+
+        return;
+    }
+
+    const std::uint32_t& uRefInitialAmmo = This->pInitialWeaponData->uAmmo;
+
+    *This->upAmmo = uRefInitialAmmo + 1;
+    *This->upReservedAmmo = uRefInitialAmmo * 2;
+
+    if (globals::entity::pLocalPlayer != This->pOwner) {
+        return;
+    }
+
+    globals::vecLocalPlayerShotPositions.emplace_back(
+        std::tuple<CVector3, CVector3, std::chrono::steady_clock::time_point>{
+            globals::entity::pLocalPlayer->vec3EyePosition,
+            *globals::screen::pvec3CurrentWeaponEndTrajectory,
+            std::chrono::steady_clock::now()
+        }
+    );
 }

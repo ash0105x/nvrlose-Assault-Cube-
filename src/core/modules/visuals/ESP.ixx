@@ -17,8 +17,8 @@ export namespace modules {
 				const GLubyte(&arrColor)[4]
 			) noexcept;
 			inline bool bToggle = true;
-			inline constexpr float MIN_DISTANCE = 1.f;
-			inline constexpr float MAX_DISTANCE = 300.f;
+			inline constexpr const float MIN_DISTANCE = 1.f;
+			inline constexpr const float MAX_DISTANCE = 300.f;
 			inline float fDistance = modules::visuals::ESP::MAX_DISTANCE;
 		}
 	}

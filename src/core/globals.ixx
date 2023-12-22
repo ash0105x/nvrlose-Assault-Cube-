@@ -28,9 +28,9 @@ export namespace globals {
 
 	namespace entity {
 		playerent* pLocalPlayer = nullptr;
-		constexpr std::uint8_t MAX_ENTITIES = 32u;
+		constexpr const std::uint8_t MAX_ENTITIES = 32u;
 		const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
-		constexpr std::uint8_t FIRST_ENTITY_INDEX = 1u;
+		constexpr const std::uint8_t FIRST_ENTITY_INDEX = 1u;
 	}
 
 	namespace modules {
@@ -52,4 +52,5 @@ export namespace globals {
 	}
 
 	std::vector<std::tuple<CVector3, CVector3, std::chrono::steady_clock::time_point>> vecLocalPlayerShotPositions = std::vector<std::tuple<CVector3, CVector3, std::chrono::steady_clock::time_point>>{  };
+	std::vector<std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>> vecEntitiesHit = std::vector<std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>>{ };
 }

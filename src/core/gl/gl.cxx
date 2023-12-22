@@ -20,7 +20,7 @@ void gl::setupOrtho(void) noexcept {
 		0.0,
 		globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT],
 		-1.0,
-		1.1
+		1.0
 	);
 }
 

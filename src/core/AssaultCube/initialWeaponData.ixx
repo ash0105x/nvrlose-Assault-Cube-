@@ -2,12 +2,7 @@ export module initialWeaponData;
 
 import <cstdint>;
 
-// name = 0x0
-// initialFirerate = 0x10a
-// ammo = 0x118
-
-export class initialWeaponData final {
-public:
+export struct initialWeaponData final {
 	const char cstrName[8]; //0x0000
 private:
 	char pad_0008[258]; //0x0008

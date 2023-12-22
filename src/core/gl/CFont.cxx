@@ -12,7 +12,7 @@ import CFont;
 
 import globals;
 
-constexpr std::uint8_t MAX_GLYPHS = 96;
+constexpr const std::uint8_t MAX_GLYPHS = 96;
 
 [[nodiscard]]
 gl::CFont::CFont(
@@ -20,33 +20,15 @@ gl::CFont::CFont(
 	_In_ const long lHeight,
 	_In_ const HDC hDC
 ) noexcept
-#ifndef _DEBUG
 	:
 	m_hFont(
 		gl::CFont::createFontHelper(
 			tcstrName,
-			lHeight,
-			hDC
+			lHeight
 		)
 	)
-#endif // !_DEBUG
 {
-	assert(tcstrName && tcstrName[NULL] != '\0' && hDC);
-
-	if (
-#ifndef _DEBUG
-		!this->m_hFont
-#else
-		!(
-			this->m_hFont = gl::CFont::createFontHelper(
-				tcstrName,
-				lHeight,
-				hDC
-			)
-		)
-#endif // !_DEBUG
-	)
-	{
+	if (!this->m_hFont) {
 		return;
 	}
 
@@ -269,11 +251,10 @@ void gl::CFont::drawCenteredf(
 
 HFONT gl::CFont::createFontHelper(
 	_In_z_ const TCHAR* const tcstrName,
-	_In_ const long lHeight,
-	_In_ const HDC hDC
+	_In_ const long lHeight
 ) noexcept
 {
-	assert(tcstrName && tcstrName[NULL] != '\0' && hDC);
+	assert(tcstrName && tcstrName[NULL] != '\0');
 
 	return(
 		CreateFont(

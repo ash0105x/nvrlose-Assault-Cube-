@@ -6,8 +6,8 @@ import<cstdint>;
 
 import offsets;
 import CTraceRay;
-import weapon;
 
+export import weapon;
 export import CVector2;
 export import CVector3;
 
@@ -55,10 +55,10 @@ export typedef enum class _LIFE_STATE : std::int32_t {
 }LIFE_STATE;
 
 export typedef bool TEAM_ID;
-export constexpr TEAM_ID TEAM_ID_CLA = false;
-export constexpr TEAM_ID TEAM_ID_RVSF = true;
+export constexpr const TEAM_ID TEAM_ID_CLA = false;
+export constexpr const TEAM_ID TEAM_ID_RVSF = true;
 
-export constexpr std::uint8_t MAX_PLAYER_NICKNAME_CHARACTER_COUNT = 16u;
+export constexpr const std::uint8_t MAX_PLAYER_NICKNAME_CHARACTER_COUNT = 16u;
 
 // Created with ReClass.NET 1.2 by KN4CK3R
 
