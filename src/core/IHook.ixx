@@ -6,6 +6,8 @@ import<sal.h>;
 
 export class IHook {
 public:
+	virtual ~IHook( void ) noexcept {  };
+public:
 	[[nodiscard]]
 	_Ret_maybenull_
 	_Check_return_
@@ -15,5 +17,5 @@ public:
 	) noexcept PURE;
 
 	_Success_(return == true)
-	virtual bool detach(void) noexcept PURE;
+	virtual bool detach( void ) noexcept PURE;
 };

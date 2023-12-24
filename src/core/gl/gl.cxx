@@ -8,7 +8,7 @@ import gl;
 import CVector2;
 import globals;
 
-void gl::setupOrtho(void) noexcept {
+void gl::setupOrtho( void ) noexcept {
 	glGetIntegerv(GL_VIEWPORT, globals::screen::viewPort);
 
 	glPushMatrix();
@@ -24,7 +24,7 @@ void gl::setupOrtho(void) noexcept {
 	);
 }
 
-void gl::restoreOrtho(void) noexcept {
+void gl::restoreOrtho( void ) noexcept {
 	glPopMatrix();
 }
 

@@ -3,9 +3,8 @@ export module weapon;
 import<cstdint>;
 
 export class playerent;
-
-export import gun;
-export import initialWeaponData;
+export class gun;
+export class initialWeaponData;
 
 export typedef enum class _WEAPON_ID : std::uint8_t {
 	WEAPON_ID_KNIFE,

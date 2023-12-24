@@ -1,5 +1,5 @@
 import CRenderer;
-import CWindow;
+
 import CTrampolineHook32;
 import utils;
 import globals;
@@ -9,12 +9,10 @@ import gl;
 import CMenu;
 import aimbot;
 import CFont;
-
+import playerent;
 import CTraceRay;
-
 import CVector2;
 import CVector3;
-
 import offsets;
 
 import<array>;
@@ -78,7 +76,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 	_In_ const HDC hDC
 ) noexcept
 {
-    static const bool bInitImGuiOnce = [](void) noexcept -> bool {
+    static const bool bInitImGuiOnce = []( void ) noexcept -> bool {
         return CMenu::initialize();
     }();
 
@@ -122,7 +120,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
 
-    const auto renderMenu = [](void) noexcept -> void {
+    const auto renderMenu = []( void ) noexcept -> void {
         gl::restoreOrtho();
 
         CMenu::begin();
@@ -142,42 +140,44 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTimePoint - globals::lastHitTimer).count() <= 250) {
         constexpr const float LINE_LENGTH = 7.f;
         constexpr const float MIDDLE_PADDING = 5.f;
-        constexpr const float CROSSHAIR_LINE_WIDTH = 0.5f;
+        constexpr const float HITMARKER_LINE_WIDTH = 0.5f;
 
         const CVector2 vec2MiddleScreen = CVector2{
             static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]) / 2.f,
             static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT]) / 2.f
         };
 
-        for (float i = 1.f; i < 3.f; ++i) {
-            const float fCosAngle = cosf(i * 45.f);
-            const float fSinAngle = sinf(i * 45.f);
+        for (std::uint32_t i = 1; i < 3; ++i) {
+            const float fAdjustedAngle = static_cast<const float>(i * 45);
 
-            CVector2 vec2CrosshairStartPosition = CVector2{
+            const float fCosAngle = cosf(fAdjustedAngle);
+            const float fSinAngle = sinf(fAdjustedAngle);
+
+            CVector2 vec2HitmarkerStartPosition = CVector2{
                 vec2MiddleScreen.x - fCosAngle * MIDDLE_PADDING,
                 vec2MiddleScreen.y + fSinAngle * MIDDLE_PADDING
             };
 
-            CVector2 vec2CrosshairEndPosition = CVector2{
-                vec2CrosshairStartPosition.x - fCosAngle * LINE_LENGTH,
-                vec2CrosshairStartPosition.y + fSinAngle * LINE_LENGTH
+            CVector2 vec2HitmarkerEndPosition = CVector2{
+                vec2HitmarkerStartPosition.x - fCosAngle * LINE_LENGTH,
+                vec2HitmarkerStartPosition.y + fSinAngle * LINE_LENGTH
             };
 
             gl::drawLineRGBA(
-                vec2CrosshairStartPosition,
-                vec2CrosshairEndPosition,
+                vec2HitmarkerStartPosition,
+                vec2HitmarkerEndPosition,
                 ARR_WHITE,
-                CROSSHAIR_LINE_WIDTH
+                HITMARKER_LINE_WIDTH
             );
 
-            vec2CrosshairStartPosition.y = vec2MiddleScreen.y - fSinAngle * MIDDLE_PADDING;
-            vec2CrosshairEndPosition.y = vec2CrosshairStartPosition.y - fSinAngle * LINE_LENGTH;
+            vec2HitmarkerStartPosition.y = vec2MiddleScreen.y - fSinAngle * MIDDLE_PADDING;
+            vec2HitmarkerEndPosition.y = vec2HitmarkerStartPosition.y - fSinAngle * LINE_LENGTH;
 
             gl::drawLineRGBA(
-                vec2CrosshairStartPosition,
-                vec2CrosshairEndPosition,
+                vec2HitmarkerStartPosition,
+                vec2HitmarkerEndPosition,
                 ARR_WHITE,
-                CROSSHAIR_LINE_WIDTH
+                HITMARKER_LINE_WIDTH
             );
         }
     }
@@ -197,10 +197,12 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             continue;
         }
 
+        constexpr const std::uint8_t MAX_VISIBLE_HIT_INDICATOR_TEXT = 10;
+
         arial.drawCenteredf(
             CVector2{
                 0.f,
-                static_cast<const float>(10 * ARIAL_FONT_HEIGHT - (i * ARIAL_FONT_HEIGHT))
+                static_cast<const float>(MAX_VISIBLE_HIT_INDICATOR_TEXT * ARIAL_FONT_HEIGHT - (i * ARIAL_FONT_HEIGHT))
             },
             static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]),
             ARR_WHITE,
@@ -239,11 +241,11 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         if (modules::visuals::ESP::bToggle || modules::visuals::snaplines::bToggle) {
             CVector2 vec2TargetOriginScreenPosition = CVector2{ };
             if (utils::math::worldToScreen(refCurrentPlayer.vec3Origin, vec2TargetOriginScreenPosition)) {
-                constexpr const GLubyte arrTeamHiddenColor[4u] = { NULL, NULL, 255u, 255u };
-                constexpr const GLubyte arrTeamVisibleColor[4u] = { NULL, 255u, NULL, 255u };
+                constexpr const GLubyte arrTeamHiddenColor[4u] = { 0xF3, 0x9F, 0x5A, 0xFF };
+                constexpr const GLubyte arrTeamVisibleColor[4u] = { 0xE8, 0xBC, 0xB9, 0xFF };
 
-                constexpr const GLubyte arrEnemyHiddenColor[4u] = { 255, 255, 255, 255 };
-                constexpr const GLubyte arrEnemyVisibleColor[4u] = { 255, NULL, NULL, 255 };
+                constexpr const GLubyte arrEnemyHiddenColor[4u] = { 0x45, 0x19, 0x52, 0xFF };
+                constexpr const GLubyte arrEnemyVisibleColor[4u] = { 0xAE, 0x44, 0x5A, 0xFF };
 
                 const GLubyte(&arrColor)[4u] = (
                     refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID ?

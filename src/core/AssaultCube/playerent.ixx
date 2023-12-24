@@ -1,15 +1,12 @@
-#include<array>
-
 export module playerent;
 
 import<cstdint>;
 
-import offsets;
 import CTraceRay;
+import CVector2;
+import CVector3;
 
 export import weapon;
-export import CVector2;
-export import CVector3;
 
 export typedef enum class _FORWARD_STATE : std::uint8_t {
 	FORWARD_STATE_FORWARD = 0x1u,
@@ -22,7 +19,7 @@ export typedef enum class _SIDE_STATE : std::uint8_t {
 }SIDE_STATE;
 
 export typedef enum class _RVSF_PLAYER_SKIN : std::uint8_t {
-	RVSF_PLAYER_SKIN_ALPHA = NULL,
+	RVSF_PLAYER_SKIN_ALPHA = 0x0,
 	RVSF_PLAYER_SKIN_TANGO,
 	RVSF_PLAYER_SKIN_COBRA,
 	RVSF_PLAYER_SKIN_VIPER,

@@ -3,17 +3,16 @@
 export module CTraceRay;
 
 import CVector3;
-import offsets;
 
 import <cstdint>;
+
+export class playerent;
 
 export enum class CROSSHAIR_ID : std::uint32_t {
 	CROSSHAIR_ID_NO_ENTITY = NULL,
 	CROSSHAIR_ID_BODY,
 	CROSSHAIR_ID_HEAD
 };
-
-export class playerent;
 
 export class CTraceRay final {
 public:

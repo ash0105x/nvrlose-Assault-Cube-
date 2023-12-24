@@ -6,6 +6,7 @@ export module ESP;
 
 import playerent;
 import CFont;
+import CVector2;
 
 export namespace modules {
 	namespace visuals {

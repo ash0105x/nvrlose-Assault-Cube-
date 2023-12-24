@@ -4,7 +4,6 @@ import CVector2;
 
 import<sal.h>;
 import<compare>;
-import<array>;
 
 class CVector3;
 export typedef CVector3 vec3;
@@ -37,8 +36,8 @@ public:
 		_In_ const CVector3&
 	) const noexcept = default;
 public:
-	bool isZero(void) const noexcept;
-	float length(void) const noexcept;
+	bool isZero( void ) const noexcept;
+	float length( void ) const noexcept;
 	float distance(
 		_In_ const CVector3& vec3
 	) const noexcept;

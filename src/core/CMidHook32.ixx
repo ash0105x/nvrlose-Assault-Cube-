@@ -1,9 +1,9 @@
 #include<Windows.h>
-#include<assert.h>
 
 export module CMidHook32;
 
 import<cstdint>;
+import<cassert>;
 
 import IHook;
 import utils;
@@ -38,7 +38,7 @@ public:
 		other.m_byArrStolenBytes = nullptr;
 	}
 public:
-	virtual ~CMidHook32(void) noexcept {
+	virtual ~CMidHook32( void ) noexcept override {
 		this->detach();
 	}
 public:
@@ -153,7 +153,7 @@ public:
 	}
 
 	_Success_(return == true)
-	virtual bool detach(void) noexcept override {
+	virtual bool detach( void ) noexcept override {
 		assert(this->m_uHookLength >= 5u);
 
 		if (!this->m_vpHookAddress || !this->m_byArrStolenBytes) {

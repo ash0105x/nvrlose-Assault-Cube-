@@ -1,11 +1,11 @@
 import CTrampolineHook32;
 
 #include<Windows.h>
+#include<exception>
 
 import utils;
 
-#include<cassert>
-#include<exception>
+import<cassert>;
 
 [[nodiscard]] CTrampolineHook32::CTrampolineHook32(
 	[[maybe_unused]] _In_ std::nullptr_t
@@ -43,8 +43,8 @@ CTrampolineHook32& CTrampolineHook32::operator=(
 
 	this->m_bypHookAddress = other.m_bypHookAddress;
 	this->m_HookLength = other.m_HookLength;
-
 	this->m_bypGateway = other.m_bypGateway;
+
 	other.m_bypGateway = nullptr;
 
 	return *this;
@@ -113,14 +113,14 @@ const void* const CTrampolineHook32::attach(
 }
 
 _Success_(return == true)
-bool CTrampolineHook32::detach(void) noexcept {
+bool CTrampolineHook32::detach( void ) noexcept {
 	assert(this->m_HookLength >= 5u);
 
 	if (!this->m_bypHookAddress || !this->m_bypGateway) {
 		return false;
 	}
 
-	const auto invalidateGateway = [this](void) noexcept {
+	const auto invalidateGateway = [this]( void ) noexcept {
 		VirtualFree(
 			this->m_bypGateway,
 			NULL,

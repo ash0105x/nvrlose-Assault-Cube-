@@ -1,10 +1,11 @@
 import CVector3;
 
-import <sal.h>;
 import CVector2;
 
+import<sal.h>;
+import<cassert>;
+
 #include<math.h>
-#include<assert.h>
 
 [[nodiscard]] CVector3::CVector3(
 	_In_ const float x,
@@ -14,7 +15,7 @@ import CVector2;
 	: x(x), y(y), z(z)
 { }
 
-bool CVector3::isZero(void) const noexcept {
+bool CVector3::isZero( void ) const noexcept {
 	return this->x == 0.f && this->y == 0.f && this->z == 0.f;
 }
 
@@ -31,7 +32,7 @@ CVector3 CVector3::scale(
 	);
 }
 
-float CVector3::length(void) const noexcept {
+float CVector3::length( void ) const noexcept {
 	// H = sqrt(K² + K²)
 	return (
 		sqrtf(

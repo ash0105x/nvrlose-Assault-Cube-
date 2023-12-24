@@ -5,9 +5,13 @@ import<tuple>;
 import<string>;
 
 import globals;
+import weapon;
+import playerent;
+import initialWeaponData;
+import CDetour32;
 import CMidHook32;
 
-export class CDetour32;
+export class IHook;
 
 export typedef enum : std::uint8_t {
     HOOK_INDEX_METHOD = NULL,
@@ -21,10 +25,16 @@ namespace jumpBackAddress {
 }
 
 namespace functions {
-    static void __declspec(naked) hkHealthDecreaseOpcode(void) noexcept {
+    static void __declspec(naked) hkHealthDecreaseOpcode( void ) noexcept {
+        __asm {
+            // Setting eax to the localPlayer pointer
+            mov eax, dword ptr[globals::entity::pLocalPlayer]
+        }
+
+        // ebx is the defender, but 0xF4 bytes ahead from the playerent base
+
 #ifdef _DEBUG
         __asm {
-            mov eax, dword ptr[globals::entity::pLocalPlayer]
             mov al, byte ptr[eax + 0x01E4u]
 
             cmp byte ptr[ebx + 0x01E4u - 0xF4u], al
@@ -39,10 +49,6 @@ namespace functions {
 #endif // _DEBUG
 
         __asm {
-            // ebx is the defender, but 0xF4 bytes ahead from the playerent base
-
-            // Setting eax to the localPlayer pointer
-            mov eax, dword ptr[globals::entity::pLocalPlayer]
             // Setting al to the localPlayer's teamID (std::uint8_t)
             mov al, byte ptr[eax + 0x032Cu]
             // Comparing the defender's teamID with our's
@@ -67,7 +73,7 @@ namespace functions {
         }
     }
 
-    static void hkShoot() noexcept {
+    static void hkShoot( void ) noexcept {
         weapon* This = nullptr;
 
         __asm {
@@ -87,7 +93,7 @@ namespace functions {
         *This->upReservedAmmo = uRefInitialAmmo * 2;
     }
 
-    static void __cdecl resetLastHitTimer(void) noexcept {
+    static void __cdecl resetLastHitTimer( void ) noexcept {
         globals::lastHitTimer = std::chrono::steady_clock::now();
     }
 
@@ -108,6 +114,7 @@ namespace functions {
     }
 
     static void __declspec(naked) hkUnknown(
+        void
         //const playerent* const pDefender, // ecx
         //const std::int32_t iDamage, // [ebp + 0x8]
         //const playerent* const pAttacker, // [ebp + 0xC]
@@ -134,7 +141,6 @@ namespace functions {
             push dword ptr[ebp + 0x8]
             lea ecx, dword ptr[eax + 0x225]
             push ecx
-
             call setValues
             add esp, 0xC
 
@@ -147,7 +153,7 @@ namespace functions {
 }
 
 export namespace hooks {
-	std::tuple<CDetour32*, const void* const, const void*&> healthDecreaseOpcode = std::tuple<CDetour32*, const void* const, const void*&>{ nullptr, &functions::hkHealthDecreaseOpcode, jumpBackAddress::vpHealthOpcode };
-    std::pair<CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>*, const void* const> shootFunction = std::pair<CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>*, const void* const>{ nullptr, &functions::hkShoot };
-    std::tuple<CDetour32*, const void* const, const void*&> unknownOpcode = std::tuple<CDetour32*, const void* const, const void*&>{ nullptr, &functions::hkUnknown, jumpBackAddress::vpUnknownOpcode };
+	std::tuple<IHook*, const void* const, const void*&> healthDecreaseOpcode = std::tuple<IHook*, const void* const, const void*&>{ nullptr, &functions::hkHealthDecreaseOpcode, jumpBackAddress::vpHealthOpcode };
+    std::pair<IHook*, const void* const> shootFunction = std::pair<IHook*, const void* const>{ nullptr, &functions::hkShoot };
+    std::tuple<IHook*, const void* const, const void*&> unknownOpcode = std::tuple<IHook*, const void* const, const void*&>{ nullptr, &functions::hkUnknown, jumpBackAddress::vpUnknownOpcode };
 }

@@ -5,8 +5,9 @@ import playerent;
 import utils;
 import gl;
 import CFont;
+import initialWeaponData;
 
-import <cstdint>;
+import<cstdint>;
 
 #include<stdio.h>
 #include<Windows.h>
@@ -42,7 +43,12 @@ void modules::visuals::ESP::onToggle(
 
     const float fPadding = static_cast<const float>(font.getHeight());
 
-    constexpr const GLubyte white[4] = { 255, 255, 255, 255 };
+    constexpr const float BAR_LINE_WIDTH = 4.f;
+    constexpr const float OUT_LINE_WIDTH = 1.f;
+
+    constexpr const GLubyte ARR_WHITE[4] = { 255, 255, 255, 255 };
+    constexpr const GLubyte OUTLINE_COLOR[3u] = { NULL, NULL, NULL };
+    constexpr const GLubyte BACKGROUND_COLOR[3] = { 128u, 128u, 128u };
 
     const char* const& cstrRefTargetNickName = refTarget.cstrNickname;
 
@@ -52,26 +58,18 @@ void modules::visuals::ESP::onToggle(
             yPosition + fPadding + 3.f
         },
         xPositionRight,
-        white,
+        ARR_WHITE,
         cstrRefTargetNickName,
         strlen(cstrRefTargetNickName)
     );
 
     const float fFontHeight = static_cast<const float>(font.getHeight());
 
-    constexpr const float BAR_LINE_WIDTH = 4.f;
-    constexpr const float OUT_LINE_WIDTH = 1.f;
-
-    constexpr const GLubyte ARR_BLACK [3u] = { NULL, NULL, NULL };
-    constexpr const GLubyte ARR_GREY[3] = { 128u, 128u, 128u };
-
     if (refTarget.pCurrentWeapon) {
         CVector2 vec2WeaponInfoPosition = CVector2{
             xPosition,
             vec2TargetOriginScreenPosition.y - fPadding - 3.f
         };
-
-        constexpr const GLubyte ARR_WHITE[3] = { 255, 255, 255 };
 
         const CVector2 vec2AmmoBarEndPosition = CVector2{
             vec2WeaponInfoPosition.x +
@@ -85,7 +83,7 @@ void modules::visuals::ESP::onToggle(
             vec2WeaponInfoPosition.y
         };
 
-        gl::drawLineRGB(
+        gl::drawLineRGBA(
             vec2WeaponInfoPosition,
             vec2AmmoBarEndPosition,
             ARR_WHITE,
@@ -98,21 +96,21 @@ void modules::visuals::ESP::onToggle(
                 xPositionRight,
                 vec2WeaponInfoPosition.y
             },
-            ARR_GREY,
+            BACKGROUND_COLOR,
             BAR_LINE_WIDTH
         );
 
         gl::drawLineRGB(
             CVector2{
-                vec2WeaponInfoPosition.x - (BAR_LINE_WIDTH / 2),
+                vec2WeaponInfoPosition.x - OUT_LINE_WIDTH / 2,
                 vec2WeaponInfoPosition.y
             },
             CVector2{
-                xPositionRight + (BAR_LINE_WIDTH / 2),
+                xPositionRight + OUT_LINE_WIDTH / 2,
                 vec2WeaponInfoPosition.y
             },
-            ARR_BLACK,
-            OUT_LINE_WIDTH
+            OUTLINE_COLOR,
+            BAR_LINE_WIDTH + OUT_LINE_WIDTH
         );
 
         const char* const& cstrRefTargetCurrentWeaponName = refTarget.pCurrentWeapon->pInitialWeaponData->cstrName;
@@ -123,7 +121,7 @@ void modules::visuals::ESP::onToggle(
                 vec2WeaponInfoPosition.y - (2.f * fPadding) - 3.f
             },
             xPositionRight,
-            white,
+            ARR_WHITE,
             cstrRefTargetCurrentWeaponName,
             strlen(cstrRefTargetCurrentWeaponName)
         );
@@ -145,7 +143,7 @@ void modules::visuals::ESP::onToggle(
                 vec2AmmoBarEndPosition.x - ((static_cast<const float>(ammoStringLength) * fFontHeight) / 2.f),
                 vec2AmmoBarEndPosition.y
             },
-            white,
+            ARR_WHITE,
             cstrAmmoBuffer,
             ammoStringLength
         );
@@ -156,11 +154,7 @@ void modules::visuals::ESP::onToggle(
 
     char cstrHealthBuffer[10] = { };
 
-    sprintf_s(
-        cstrHealthBuffer,
-        "%d",
-        refTarget.iHealth
-    );
+    _itoa_s(refTarget.iHealth, cstrHealthBuffer, 10);
 
     const size_t healthStringLength = strlen(cstrHealthBuffer);
 
@@ -169,12 +163,11 @@ void modules::visuals::ESP::onToggle(
             fHealthBarPositionX - ((static_cast<const float>(healthStringLength) * fFontHeight) / 2.f),
             fHealthBarEndPositionY
         },
-        white,
+        ARR_WHITE,
         cstrHealthBuffer,
         healthStringLength
     );
 
-    // Colored esp box
     glLineWidth(0.1f);
     glColor4ub(
         arrColor[NULL],
@@ -206,8 +199,6 @@ void modules::visuals::ESP::onToggle(
     );
 
     glEnd();
-
-    // Colored esp health bar
     
     const GLubyte playerHealthColorValue = static_cast<const GLubyte>(static_cast<const float>(refTarget.iHealth) * 2.25f);
 
@@ -231,8 +222,6 @@ void modules::visuals::ESP::onToggle(
         BAR_LINE_WIDTH
     );
 
-    // grey esp health bar
-
     gl::drawLineRGB(
         CVector2{
             fHealthBarPositionX,
@@ -242,20 +231,20 @@ void modules::visuals::ESP::onToggle(
             fHealthBarPositionX,
             vec2TargetOriginScreenPosition.y
         },
-        ARR_GREY,
+        BACKGROUND_COLOR,
         BAR_LINE_WIDTH
     );
 
     gl::drawLineRGB(
         CVector2{
             fHealthBarPositionX,
-            yPosition + (BAR_LINE_WIDTH / 2.f)
+            yPosition + OUT_LINE_WIDTH / 2
         },
         CVector2{
             fHealthBarPositionX,
-            vec2TargetOriginScreenPosition.y - (BAR_LINE_WIDTH / 2.f)
+            vec2TargetOriginScreenPosition.y - OUT_LINE_WIDTH / 2
         },
-        ARR_BLACK,
-        OUT_LINE_WIDTH
+        OUTLINE_COLOR,
+        BAR_LINE_WIDTH + OUT_LINE_WIDTH
     );
 }

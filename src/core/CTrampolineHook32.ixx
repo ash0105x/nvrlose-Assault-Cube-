@@ -28,7 +28,7 @@ public:
 		_Inout_ CTrampolineHook32&&
 	) noexcept;
 public:
-	virtual ~CTrampolineHook32( void ) noexcept;
+	virtual ~CTrampolineHook32( void ) noexcept override;
 public:
 	[[nodiscard]]
 	_Ret_maybenull_
@@ -39,7 +39,7 @@ public:
 	) noexcept override;
 
 	_Success_(return == true)
-	virtual bool detach(void) noexcept override;
+	virtual bool detach( void ) noexcept override;
 private:
 	std::uint8_t* m_bypHookAddress = nullptr;
 	size_t m_HookLength = NULL;

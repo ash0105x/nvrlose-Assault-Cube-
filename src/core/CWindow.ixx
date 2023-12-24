@@ -5,7 +5,6 @@ export module CWindow;
 import<cstdint>;
 import<type_traits>;
 
-// Declaration of CWindow class
 export class CWindow final {
 public:
 	// Constructor declarations
@@ -16,21 +15,15 @@ public:
 		_In_ const HWND hwWindow
 	) noexcept;
 public:
-	[[nodiscard]] CWindow(
-		_In_ const CWindow&
-	) noexcept = default;
-	[[nodiscard]] CWindow(
-		CWindow&&
-	) noexcept = default;
+	CWindow(
+		_Inout_ CWindow&&
+	) noexcept;
 public:
-	~CWindow( void ) noexcept = default;
+	~CWindow( void ) noexcept;
 public:
 	CWindow& operator=(
-		_In_ const CWindow&
-	) noexcept = default;
-	CWindow& operator=(
 		CWindow&&
-	) noexcept = default;
+	) noexcept;
 	CWindow& operator=(
 		_In_ const HWND&
 	) noexcept;
@@ -39,9 +32,13 @@ public:
 public:
 	_Check_return_opt_
 	_Success_(return == true)
-	bool changeWndProc(
+	bool setWndProc(
 		_In_ const WNDPROC pNewWndProc
 	) noexcept;
+
+	_Check_return_opt_
+	_Success_(return == true)
+	bool restoreOriginalWndProc( void ) noexcept;
 
 	[[nodiscard]]
 	const WNDPROC& getOriginalWndProc( void ) const noexcept;
@@ -54,6 +51,19 @@ public:
 		_Out_ std::uint16_t& uHeight
 	) noexcept;
 public:
+	_Check_return_opt_
+	_Success_(return == true)
+	bool setTitle(
+		_In_z_ const TCHAR* const tcstrTitle
+	) noexcept;
+
+	_Check_return_opt_
+	_Success_(return == true)
+	bool restoreOriginalTitle( void ) noexcept;
+
+	[[nodiscard]]
+	const TCHAR* const& getOriginalWindowTitle( void ) const noexcept;
+public:
 	[[nodiscard]]
 	_Success_(return != nullptr)
 	_Ret_maybenull_
@@ -62,6 +72,5 @@ public:
 private:
 	HWND m_hwWindow = nullptr;
 	WNDPROC m_pOriginalWndProc = nullptr;
-
-	//TCHAR* m_pOriginalWindowText = nullptr;
+	TCHAR* m_tcstrOriginalWindowTitle = nullptr;
 };

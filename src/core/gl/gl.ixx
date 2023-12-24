@@ -6,12 +6,12 @@ export module gl;
 
 import CVector2;
 
-import <sal.h>;
-import <cstdint>;
+import<sal.h>;
+import<cstdint>;
 
 export namespace gl {
-	void setupOrtho(void) noexcept;
-	void restoreOrtho(void) noexcept;
+	void setupOrtho( void ) noexcept;
+	void restoreOrtho( void ) noexcept;
 	void drawLineRGB(
 		_In_ const CVector2& vec2Start,
 		_In_ const CVector2& vec2End,

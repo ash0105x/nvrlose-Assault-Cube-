@@ -7,8 +7,11 @@ export module globals;
 import<cstdint>;
 import<array>;
 
-import playerent;
 import offsets;
+
+export class playerent;
+export class CWindow;
+export class CVector3;
 
 export typedef enum : std::uint8_t {
 	VIEW_PORT_ELEMENT_X = NULL,

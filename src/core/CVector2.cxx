@@ -1,8 +1,7 @@
 import CVector2;
 
 import<sal.h>;
-
-#include<assert.h>
+import<cassert>;
 
 #include<math.h>
 
@@ -13,11 +12,11 @@ import<sal.h>;
 	: x(x), y(y)
 { }
 
-bool CVector2::isZero(void) const noexcept {
+bool CVector2::isZero( void ) const noexcept {
 	return this->x == 0.f && this->y == 0.f;
 }
 
-float CVector2::length(void) const noexcept {
+float CVector2::length( void ) const noexcept {
 	return (
 		sqrtf(
 			(this->x * this->x) +

@@ -1,11 +1,10 @@
 import CDetour32;
 
 #include<Windows.h>
+#include<exception>
 
 import<cstdint>;
-
-#include<cassert>
-#include<exception>
+import<cassert>;
 
 import utils;
 
@@ -19,7 +18,7 @@ import utils;
 	_In_ const size_t hookLength
 ) noexcept
 	:
-	m_bypHookAddress(static_cast<std::uint8_t*>(vpHookAddress)),
+	m_bypHookAddress(reinterpret_cast<std::uint8_t* const>(vpHookAddress)),
 	m_HookLength(hookLength)
 { }
 
@@ -51,7 +50,7 @@ CDetour32& CDetour32::operator=(
 	return *this;
 }
 
-CDetour32::~CDetour32(void) noexcept {
+CDetour32::~CDetour32( void ) noexcept {
 	this->detach();
 }
 
@@ -98,7 +97,7 @@ const void* const CDetour32::attach(
 }
 
 _Success_(return == true)
-bool CDetour32::detach(void) noexcept {
+bool CDetour32::detach( void ) noexcept {
 	assert(this->m_HookLength >= 5u);
 
 	if (!this->m_bypHookAddress || !this->m_byArrStolenBytes) {

@@ -24,11 +24,11 @@ export namespace gl {
 			_Inout_ CFont&&
 		) noexcept;
 	public:
-		~CFont(void) noexcept;
+		~CFont( void ) noexcept;
 	public:
-		bool ok(void) const noexcept;
+		bool ok( void ) const noexcept;
 	public:
-		const LONG& getHeight(void) const noexcept;
+		const LONG& getHeight( void ) const noexcept;
 	public:
 		void draw(
 			_In_ const CVector2& vec2RefPosition,

@@ -5,10 +5,11 @@ import CFont;
 #include<gl/GL.h>
 #pragma comment(lib, "opengl32.lib")
 
-#include<cassert>
 #include<exception>
 #include<stdio.h>
-#include<string>
+
+import<cassert>;
+import<string>;
 
 import globals;
 
@@ -82,7 +83,7 @@ gl::CFont& gl::CFont::operator=(
 	return *this;
 }
 
-gl::CFont::~CFont(void) noexcept {
+gl::CFont::~CFont( void ) noexcept {
 	if (this->m_iBase) {
 		DeleteObject(this->m_hFont);
 		glDeleteLists(this->m_iBase, ::MAX_GLYPHS);
@@ -92,11 +93,11 @@ gl::CFont::~CFont(void) noexcept {
 	}
 }
 
-bool gl::CFont::ok(void) const noexcept {
+bool gl::CFont::ok( void ) const noexcept {
 	return this->m_iBase && this->m_hFont && this->m_lHeight;
 }
 
-const LONG& gl::CFont::getHeight(void) const noexcept {
+const LONG& gl::CFont::getHeight( void ) const noexcept {
 	return this->m_lHeight;
 }
 
@@ -198,7 +199,7 @@ void gl::CFont::drawCenteredf(
 
 	this->draw(
 		CVector2{
-			(vec2RefPosition.x + (fEndX - vec2RefPosition.x) / 2.f) - (static_cast<const float>(formatedStringLength * this->getHeight()) / 2.f),
+			(vec2RefPosition.x + (fEndX - vec2RefPosition.x) / 2.f) - (static_cast<const float>(formatedStringLength * this->m_lHeight) / 2.f),
 			vec2RefPosition.y
 		},
 		arrColor,

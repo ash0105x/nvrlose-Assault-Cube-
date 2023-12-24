@@ -5,13 +5,10 @@ import snaplines;
 import globals;
 import aimbot;
 import CWindow;
-import utils;
 
 import<filesystem>;
 
 #include<Windows.h>
-
-#include<memory>
 
 #include<gl/GL.h>
 #pragma comment(lib, "opengl32.lib")
@@ -34,6 +31,15 @@ CMenu::CMenu(
     {
         return;
     }
+
+    constexpr const TCHAR* const CLIENT_NAME = (
+        __TEXT("nvrlose client")
+#ifdef _DEBUG
+        __TEXT(" (debug)")
+#endif // _DEBUG
+    );
+
+    CMenu::_AssaultCubeWindow.setTitle(CLIENT_NAME);
 
     if (
         const HMODULE hSDL = GetModuleHandle(__TEXT("SDL.dll"));
@@ -94,13 +100,13 @@ CMenu::CMenu(
     free(cstrAppdataPath);
 }
 
-CMenu::~CMenu(void) noexcept {
+CMenu::~CMenu( void ) noexcept {
     if (
         const WNDPROC& refOriginalWndProc = CMenu::_AssaultCubeWindow.getOriginalWndProc();
         refOriginalWndProc
     )
     {
-        CMenu::_AssaultCubeWindow.changeWndProc(refOriginalWndProc);
+        CMenu::_AssaultCubeWindow.setWndProc(refOriginalWndProc);
         ImGui_ImplOpenGL2_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();
@@ -119,7 +125,7 @@ CMenu::~CMenu(void) noexcept {
     }
 }
 
-const bool& CMenu::ok(void) const noexcept {
+const bool& CMenu::ok( void ) const noexcept {
     return this->m_bOk;
 }
 
@@ -167,15 +173,15 @@ LRESULT CALLBACK CMenu::hk_WndProc(
     return TRUE;
 }
 
-void CMenu::drawMain(void) noexcept {
-    constexpr const char cstrClientName[] = (
+void CMenu::drawMain( void ) noexcept {
+    constexpr const char* const CLIENT_NAME = (
         "nvrlose client"
 #ifdef _DEBUG
-        " (dev build)"
+        " (debug)"
 #endif // _DEBUG
     );
 
-    if (!ImGui::Begin(cstrClientName)) {
+    if (!ImGui::Begin(CLIENT_NAME)) {
         ImGui::End();
         return;
     }
@@ -189,19 +195,19 @@ void CMenu::drawMain(void) noexcept {
     ImGui::End();
 }
 
-void CMenu::begin(void) noexcept {
+void CMenu::begin( void ) noexcept {
     ImGui_ImplWin32_NewFrame();
     ImGui_ImplOpenGL2_NewFrame();
     ImGui::NewFrame();
 }
 
-void CMenu::end(void) noexcept {
+void CMenu::end( void ) noexcept {
     ImGui::EndFrame();
     ImGui::Render();
     ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
 }
 
-bool CMenu::initialize(void) noexcept {
+bool CMenu::initialize( void ) noexcept {
     IMGUI_CHECKVERSION();
 
     if (!ImGui::CreateContext()) {
@@ -213,6 +219,6 @@ bool CMenu::initialize(void) noexcept {
     return (
         (CMenu::_bImGuiWin32Initialized = ImGui_ImplWin32_Init(static_cast<const HWND>(CMenu::_AssaultCubeWindow))) &&
         (CMenu::_bImGuiOpenGLInitialized = ImGui_ImplOpenGL2_Init()) &&
-        CMenu::_AssaultCubeWindow.changeWndProc(&CMenu::hk_WndProc)
+        CMenu::_AssaultCubeWindow.setWndProc(&CMenu::hk_WndProc)
     );
 }

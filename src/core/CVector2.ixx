@@ -32,8 +32,8 @@ public:
 		_In_ const CVector2&
 	) const noexcept = default;
 public:
-	bool isZero(void) const noexcept;
-	float length(void) const noexcept;
+	bool isZero( void ) const noexcept;
+	float length( void ) const noexcept;
 	float distance(
 		_In_ const CVector2& vec2
 	) const noexcept;

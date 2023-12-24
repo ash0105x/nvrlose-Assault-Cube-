@@ -5,7 +5,6 @@ export module CRenderer;
 import<sal.h>;
 import<cstdint>;
 
-import CWindow;
 import CTrampolineHook32;
 import CMenu;
 

@@ -12,16 +12,16 @@ public:
 		_In_z_ const char* const cstrName
 	) noexcept;
 public:
-	~CMenu(void) noexcept;
+	~CMenu( void ) noexcept;
 public:
-	const bool& ok(void) const noexcept;
+	const bool& ok( void ) const noexcept;
 public:
-	static void drawMain(void) noexcept;
+	static void drawMain( void ) noexcept;
 public:
-	static void begin(void) noexcept;
-	static void end(void) noexcept;
+	static void begin( void ) noexcept;
+	static void end( void ) noexcept;
 public:
-	static bool initialize(void) noexcept;
+	static bool initialize( void ) noexcept;
 public:
 	static inline bool _bOpen = false;
 private:

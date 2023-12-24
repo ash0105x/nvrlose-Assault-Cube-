@@ -1,15 +1,12 @@
 import utils;
 
-//import <assert.h>;
-//import <iostream>;
-
 #include<Windows.h>
 #include<TlHelp32.h>
 
 #include<iostream>
-#include<assert.h>
 
 import<tchar.h>;
+import<cassert>;
 
 import globals;
 
@@ -102,6 +99,8 @@ std::ptrdiff_t utils::memory::calculateRelativeOffset(
 	return static_cast<const std::ptrdiff_t>(pTo - pFrom - 5u);
 }
 
+_Check_return_opt_
+_Success_(return == true)
 bool utils::process::enumerate(
 	_In_ bool(* const& pRefEnumFunction)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept,
 	_In_opt_ void* const vpExtraParameter
@@ -161,22 +160,21 @@ bool utils::process::isRunning(
 		false
 	};
 
-	return(
-		utils::process::enumerate(
-			[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
-				ProcessInformation_t& refProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
+	utils::process::enumerate(
+		[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
+			ProcessInformation_t& refProcessInformation = *static_cast<ProcessInformation_t* const>(vpExtraParameter);
 
-				if (NULL != _tcscmp(refProcessInformation.tcstrRefProcessName, refProcessInfo32.szExeFile)) {
-					return true;
-				}
+			if (NULL != _tcscmp(refProcessInformation.tcstrRefProcessName, refProcessInfo32.szExeFile)) {
+				return true;
+			}
 
-				refProcessInformation.bIsRunning = true;
-				return false;
-			},
-			&processInformation
-		) &&
-		processInformation.bIsRunning
+			refProcessInformation.bIsRunning = true;
+			return false;
+		},
+		&processInformation
 	);
+
+	return processInformation.bIsRunning;
 }
 
 [[nodiscard]]
@@ -199,7 +197,7 @@ const TCHAR* utils::process::name(
 
 	utils::process::enumerate(
 		[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
-			ProcessInformation_t& refProcessInformation = *reinterpret_cast<ProcessInformation_t* const>(vpExtraParameter);
+			ProcessInformation_t& refProcessInformation = *static_cast<ProcessInformation_t* const>(vpExtraParameter);
 
 			if (refProcessInfo32.th32ProcessID != refProcessInformation.dwRefId) {
 				return true;

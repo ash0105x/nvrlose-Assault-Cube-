@@ -4,6 +4,8 @@
 #endif // !WIN32
 
 #include<Windows.h>
+#include<iostream>
+#include<tuple>
 
 // utility functions
 import utils;
@@ -11,30 +13,24 @@ import utils;
 import playerent;
 // offsets and memory addresses
 import offsets;
-// CTrampolineHook32 class
-import CTrampolineHook32;
 // CRenderer class
 import CRenderer;
 // globals namespace
 import globals;
-
-import CMidHook32;
-import weapon;
-import CDetour32;
-import signatures;
-import CMenu;
+// CTraceRay function pointer initialisation
 import CTraceRay;
+// patterns to find in AssaultCube's source code
+import signatures;
+
+// hooking
 import hooks;
+import CMidHook32;
+import CDetour32;
+import CTrampolineHook32;
 
 import<array>;
 import<tchar.h>;
-
-// std::uintptr_t, std::bad_alloc, ...
-#include<iostream>
-// assert
-#include<assert.h>
-#include<chrono>
-#include<tuple>
+import<cassert>;
 
 namespace globals {
     static const CRenderer* pRenderer = nullptr;
@@ -45,14 +41,14 @@ static DWORD CALLBACK MainThread(
 ) noexcept
 {
     globals::entity::pLocalPlayer = *reinterpret_cast<playerent* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
-    
-    const auto exitSecure = [&vpInstDLL](_In_z_ const char* const cstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void{
-        assert(cstrMessage);
 
-        MessageBoxA(
+    const auto exitSecure = [&vpInstDLL](_In_z_ const TCHAR* const tcstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void {
+        assert(tcstrMessage);
+
+        MessageBox(
             nullptr,
-            cstrMessage,
-            "Error",
+            tcstrMessage,
+            __TEXT("Error"),
             (MB_ICONERROR | MB_OK)
         );
 
@@ -63,11 +59,11 @@ static DWORD CALLBACK MainThread(
         globals::pRenderer = new CRenderer{ "nvrlose client (Assault Cube)" };
     }
     catch (const std::bad_alloc&) {
-        exitSecure("Failed to allocate enough memory to hold the \"CRenderer\"-class!", ERROR_NOT_ENOUGH_MEMORY);
+        exitSecure(__TEXT("Failed to allocate enough memory to hold the \"CRenderer\"-class!"), ERROR_NOT_ENOUGH_MEMORY);
     }
 
     if (!globals::pRenderer->ok()) {
-        exitSecure("Failed to make in-game-rendering possible!", ERROR_FUNCTION_FAILED);
+        exitSecure(__TEXT("Failed to make in-game-rendering possible!"), ERROR_FUNCTION_FAILED);
     }
 
     if (
@@ -81,7 +77,7 @@ static DWORD CALLBACK MainThread(
         )
     )
     {
-        exitSecure("Failed to find function popupMessage", ERROR_NOT_FOUND);
+        exitSecure(__TEXT("Failed to find function popupMessage"), ERROR_NOT_FOUND);
     }
 
     const auto exit = [&vpInstDLL](_In_z_ const char* const cstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void{
@@ -150,17 +146,17 @@ static DWORD CALLBACK MainThread(
     }
 
     try {
-        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode) = new std::remove_pointer<std::remove_reference<decltype(std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode))>::type>::type{
+        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode) = new CDetour32{
             vpHealthOpCode,
             5u
         };
 
-        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction) = new std::remove_pointer<std::remove_reference<decltype(std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction))>::type>::type{
+        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction) = new CMidHook32<MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_LAST>{
             vpShootFunction,
             8u
         };
 
-        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode) = new std::remove_pointer<std::remove_reference<decltype(std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode))>::type>::type{
+        std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode) = new CDetour32{
             vpUnknownFunction,
             6u
         };
@@ -271,7 +267,8 @@ BOOL APIENTRY DllMain(
                 __TEXT("Error!"),
                 (MB_OK | MB_ICONERROR)
             );
-            return TRUE;
+
+            return FALSE;
         }
 
         if (globals::function::pPopupMessage) {

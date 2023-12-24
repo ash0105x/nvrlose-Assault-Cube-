@@ -1,18 +1,14 @@
 import CWindow;
 
 #include<Windows.h>
-
 #include<exception>
 
-#include<assert.h>
-//import <assert.h>;
-
+import<type_traits>;
+import<cassert>;
 
 [[nodiscard]] CWindow::CWindow(
 	[[maybe_unused]] _In_ const std::nullptr_t
 ) noexcept
-	:
-	m_hwWindow(nullptr)
 { }
 
 [[nodiscard]] CWindow::CWindow(
@@ -21,6 +17,41 @@ import CWindow;
 	:
 	m_hwWindow(hwWindow)
 { }
+
+CWindow::CWindow(
+	_Inout_ CWindow&& other
+) noexcept
+	:
+	m_hwWindow(other.m_hwWindow),
+	m_pOriginalWndProc(other.m_pOriginalWndProc),
+	m_tcstrOriginalWindowTitle(other.m_tcstrOriginalWindowTitle)
+{
+	other.m_pOriginalWndProc = nullptr;
+	other.m_tcstrOriginalWindowTitle = nullptr;
+}
+
+CWindow::~CWindow( void ) noexcept {
+	this->restoreOriginalWndProc();
+	this->restoreOriginalTitle();
+}
+
+CWindow& CWindow::operator=(
+	CWindow&& other
+) noexcept
+{
+	if (&other == this) {
+		return *this;
+	}
+
+	this->m_hwWindow = other.m_hwWindow;
+	this->m_pOriginalWndProc = other.m_pOriginalWndProc;
+	this->m_tcstrOriginalWindowTitle = other.m_tcstrOriginalWindowTitle;
+
+	other.m_pOriginalWndProc = nullptr;
+	other.m_tcstrOriginalWindowTitle = nullptr;
+
+	return *this;
+}
 
 CWindow& CWindow::operator=(
 	_In_ const HWND& hwWindow
@@ -37,11 +68,19 @@ CWindow::operator HWND( void ) const noexcept {
 
 _Check_return_opt_
 _Success_(return == true)
-bool CWindow::changeWndProc(
+bool CWindow::setWndProc(
 	_In_ const WNDPROC pNewWndProc
 ) noexcept
 {
 	assert(pNewWndProc);
+
+	if (this->m_pOriginalWndProc) {
+		return SetWindowLongPtr(
+			this->m_hwWindow,
+			GWLP_WNDPROC,
+			reinterpret_cast<const LONG_PTR>(pNewWndProc)
+		);
+	}
 
 	this->m_pOriginalWndProc = reinterpret_cast<const WNDPROC>(
 		SetWindowLongPtr(
@@ -51,7 +90,25 @@ bool CWindow::changeWndProc(
 		)
 	);
 
-	return static_cast<const bool>(this->m_pOriginalWndProc);
+	return this->m_pOriginalWndProc;
+}
+
+_Check_return_opt_
+_Success_(return == true)
+bool CWindow::restoreOriginalWndProc( void ) noexcept {
+	if (!this->m_pOriginalWndProc) {
+		return false;
+	}
+
+	const bool bSuccessfullyRestoredOriginalWndProc = SetWindowLongPtr(
+		this->m_hwWindow,
+		GWLP_WNDPROC,
+		reinterpret_cast<const LONG_PTR>(this->m_pOriginalWndProc)
+	);
+
+	this->m_pOriginalWndProc = nullptr;
+
+	return bSuccessfullyRestoredOriginalWndProc;
 }
 
 [[nodiscard]]
@@ -87,6 +144,56 @@ bool CWindow::getWindowSize(
 
 	// Return true to indicate that the update was successful.
 	return true;
+}
+
+_Check_return_opt_
+_Success_(return == true)
+bool CWindow::setTitle(
+	_In_z_ const TCHAR* const tcstrTitle
+) noexcept
+{
+	assert(tcstrTitle && tcstrTitle[NULL] != __TEXT('\0'));
+
+	if (this->m_tcstrOriginalWindowTitle) {
+		return SetWindowText(this->m_hwWindow, tcstrTitle);
+	}
+
+	const std::int32_t iOriginalWindowTitleLength = GetWindowTextLength(this->m_hwWindow) + 1;
+
+	if (iOriginalWindowTitleLength <= 1) {
+		return false;
+	}
+
+	try {
+		this->m_tcstrOriginalWindowTitle = new TCHAR[(iOriginalWindowTitleLength / sizeof(TCHAR)) + 1];
+	}
+	catch (const std::bad_alloc&) {
+		return false;
+	}
+
+	return(
+		GetWindowText(this->m_hwWindow, this->m_tcstrOriginalWindowTitle, iOriginalWindowTitleLength) &&
+		SetWindowText(this->m_hwWindow, tcstrTitle)
+	);
+}
+
+_Check_return_opt_
+_Success_(return == true)
+bool CWindow::restoreOriginalTitle( void ) noexcept {
+	if (!this->m_tcstrOriginalWindowTitle) {
+		return false;
+	}
+
+	const bool bSuccessfullyRestored = SetWindowText(this->m_hwWindow, this->m_tcstrOriginalWindowTitle);
+	delete[] this->m_tcstrOriginalWindowTitle;
+	this->m_tcstrOriginalWindowTitle = nullptr;
+
+	return bSuccessfullyRestored;
+}
+
+[[nodiscard]]
+const TCHAR* const& CWindow::getOriginalWindowTitle( void ) const noexcept {
+	return this->m_tcstrOriginalWindowTitle;
 }
 
 [[nodiscard]]

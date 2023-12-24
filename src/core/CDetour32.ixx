@@ -27,7 +27,7 @@ public:
 		_Inout_ CDetour32&&
 	) noexcept;
 public:
-	virtual ~CDetour32(void) noexcept;
+	virtual ~CDetour32( void ) noexcept override;
 public:
 	[[nodiscard]]
 	_Ret_maybenull_
@@ -38,7 +38,7 @@ public:
 	) noexcept override;
 
 	_Success_(return == true)
-	virtual bool detach(void) noexcept override;
+	virtual bool detach( void ) noexcept override;
 public:
 	std::uint8_t* m_bypHookAddress = nullptr;
 	size_t m_HookLength = NULL;

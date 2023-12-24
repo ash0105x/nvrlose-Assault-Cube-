@@ -1,7 +1,5 @@
 export module snaplines;
 
-import playerent;
-
 export namespace modules {
 	namespace visuals {
 		namespace snaplines {

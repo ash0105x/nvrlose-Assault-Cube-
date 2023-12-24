@@ -4,7 +4,6 @@
 export module utils;
 
 import<sal.h>;
-import<vector>;
 import<cstdint>;
 import<array>;
 import<tchar.h>;
@@ -95,7 +94,7 @@ export namespace utils {
 		{
 			assert(vpStart);
 
-			std::uint8_t* bypDMAAddress = static_cast<std::uint8_t*>(vpStart);
+			std::uint8_t* bypDMAAddress = static_cast<std::uint8_t* const>(vpStart);
 
 			for (const std::ptrdiff_t& refOffset : arrOffsets) {
 				bypDMAAddress = *reinterpret_cast<std::uint8_t* const* const>(bypDMAAddress);
@@ -113,6 +112,8 @@ export namespace utils {
 	}
 
 	namespace process {
+		_Check_return_opt_
+		_Success_(return == true)
 		bool enumerate(
 			_In_ bool(* const& pRefEnumFunction)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept,
 			_In_opt_ void* const vpExtraParameter
