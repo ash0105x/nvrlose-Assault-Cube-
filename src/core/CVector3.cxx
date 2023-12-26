@@ -7,7 +7,7 @@ import<cassert>;
 
 #include<math.h>
 
-[[nodiscard]] CVector3::CVector3(
+[[nodiscard]] constexpr CVector3::CVector3(
 	_In_ const float x,
 	_In_ const float y,
 	_In_ const float z
@@ -16,7 +16,7 @@ import<cassert>;
 { }
 
 bool CVector3::isZero( void ) const noexcept {
-	return this->x == 0.f && this->y == 0.f && this->z == 0.f;
+	return this->xy.isZero() && this->z == 0.f;
 }
 
 CVector3 CVector3::scale(
@@ -169,34 +169,42 @@ CVector3& CVector3::operator+=(
 	_In_ const CVector3& other
 ) noexcept
 {
-	*this = *this + other;
+	CVector3& vec3 = *this;
 
-	return *this;
+	vec3 = vec3 + other;
+
+	return vec3;
 }
 
 CVector3& CVector3::operator-=(
 	_In_ const CVector3& other
 ) noexcept
 {
-	*this = *this - other;
+	CVector3& vec3 = *this;
 
-	return *this;
+	vec3 = vec3 - other;
+
+	return vec3;
 }
 
 CVector3& CVector3::operator*= (
 	_In_ const CVector3& other
 ) noexcept
 {
-	*this = *this * other;
+	CVector3& vec3 = *this;
 
-	return *this;
+	vec3 = vec3 * other;
+
+	return vec3;
 }
 
 CVector3& CVector3::operator/=(
 	_In_ const CVector3& other
 ) noexcept
 {
-	*this = *this / other;
+	CVector3& vec3 = *this;
 
-	return *this;
+	vec3 = vec3 / other;
+
+	return vec3;
 }

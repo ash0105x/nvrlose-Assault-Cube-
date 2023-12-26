@@ -6,7 +6,9 @@ import<sal.h>;
 
 export class IHook {
 public:
-	virtual ~IHook( void ) noexcept {  };
+	virtual ~IHook( void ) noexcept {
+		return;
+	};
 public:
 	[[nodiscard]]
 	_Ret_maybenull_

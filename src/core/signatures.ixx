@@ -6,7 +6,9 @@ import<regex>;
 typedef unsigned char byte_t;
 
 export template<size_t t_patternLength>
-using SignatureData_t = const std::pair<const byte_t(&)[t_patternLength], const char(&)[t_patternLength]>;
+using SignatureDataEx_t = const std::pair<const byte_t(&)[t_patternLength], const char(&)[t_patternLength]>;
+
+export typedef const std::pair<const byte_t* const, const char* const> SignatureData_t;
 
 export typedef enum : std::uint8_t {
     SIGNATURE_DATA_INDEX_PATTERN = NULL,
@@ -29,14 +31,14 @@ namespace patterns {
 
 export namespace signatures {
     namespace code {
-        constexpr const SignatureData_t<sizeof(patterns::code::health)> health = SignatureData_t<sizeof(patterns::code::health)>{ patterns::code::health, "xxxxx" };
+        constexpr const SignatureDataEx_t<sizeof(patterns::code::health)> health = SignatureDataEx_t<sizeof(patterns::code::health)>{ patterns::code::health, "xxxxx" };
     }
     namespace function {
-        constexpr const SignatureData_t<sizeof(patterns::function::shoot)> shoot = SignatureData_t<sizeof(patterns::function::shoot)>{ patterns::function::shoot, "xx????xxxxxxxxxxxxxx????xxxxxxxxxxxxxxx????xxx????xxxxxxxxxxxxxxxxxxxx????xxxxxxx?????x????xxxxxxxxxxxxxxxxxxxxxxx????xxxxxxxxxxx????xxxxxxxxxxxxxxxxxxxxxxxxx" };
-        constexpr const SignatureData_t<sizeof(patterns::function::popupMessage)> popupMessage = SignatureData_t<sizeof(patterns::function::popupMessage)>{ patterns::function::popupMessage,"xxxxxxxxxx" };
-        constexpr const SignatureData_t<sizeof(patterns::function::traceLine)> traceLine = SignatureData_t<sizeof(patterns::function::traceLine)>{ patterns::function::traceLine, "xxxxxxxxx" };
-        constexpr const SignatureData_t<sizeof(patterns::function::isVisible)> isVisible = SignatureData_t<sizeof(patterns::function::isVisible)>{ patterns::function::isVisible, "xxxxxxxxxxx" };
-        constexpr const SignatureData_t<sizeof(patterns::function::intersect)> intersect = SignatureData_t<sizeof(patterns::function::intersect)>{ patterns::function::intersect, "xxxxxxxxxxx" };
-        constexpr const SignatureData_t<sizeof(patterns::function::unknown)> unknown = SignatureData_t<sizeof(patterns::function::unknown)>{ patterns::function::unknown, "xxxxxxxxxxxxxxx" };
+        constexpr const SignatureDataEx_t<sizeof(patterns::function::shoot)> shoot = SignatureDataEx_t<sizeof(patterns::function::shoot)>{ patterns::function::shoot, "xx????xxxxxxxxxxxxxx????xxxxxxxxxxxxxxx????xxx????xxxxxxxxxxxxxxxxxxxx????xxxxxxx?????x????xxxxxxxxxxxxxxxxxxxxxxx????xxxxxxxxxxx????xxxxxxxxxxxxxxxxxxxxxxxxx" };
+        constexpr const SignatureDataEx_t<sizeof(patterns::function::popupMessage)> popupMessage = SignatureDataEx_t<sizeof(patterns::function::popupMessage)>{ patterns::function::popupMessage,"xxxxxxxxxx" };
+        constexpr const SignatureDataEx_t<sizeof(patterns::function::traceLine)> traceLine = SignatureDataEx_t<sizeof(patterns::function::traceLine)>{ patterns::function::traceLine, "xxxxxxxxx" };
+        constexpr const SignatureDataEx_t<sizeof(patterns::function::isVisible)> isVisible = SignatureDataEx_t<sizeof(patterns::function::isVisible)>{ patterns::function::isVisible, "xxxxxxxxxxx" };
+        constexpr const SignatureDataEx_t<sizeof(patterns::function::intersect)> intersect = SignatureDataEx_t<sizeof(patterns::function::intersect)>{ patterns::function::intersect, "xxxxxxxxxxx" };
+        constexpr const SignatureDataEx_t<sizeof(patterns::function::unknown)> unknown = SignatureDataEx_t<sizeof(patterns::function::unknown)>{ patterns::function::unknown, "xxxxxxxxxxxxxxx" };
     }
 }

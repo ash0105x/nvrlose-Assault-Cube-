@@ -5,7 +5,7 @@ import<cassert>;
 
 #include<math.h>
 
-[[nodiscard]] CVector2::CVector2(
+[[nodiscard]] constexpr CVector2::CVector2(
 	_In_ const float x,
 	_In_ const float y
 ) noexcept

@@ -95,11 +95,13 @@ const void* const CTrampolineHook32::attach(
 		this->m_HookLength
 	);
 
-	this->m_bypGateway[this->m_HookLength] = utils::x86asm::jmp;
-	*reinterpret_cast<DWORD* const>(this->m_bypGateway + this->m_HookLength + 1u) = utils::memory::calculateRelativeOffset(
+	const std::ptrdiff_t ptrRelativeOffset = utils::memory::calculateRelativeOffset(
 		this->m_bypGateway,
 		this->m_bypHookAddress
 	);
+
+	this->m_bypGateway[this->m_HookLength] = utils::x86asm::jmp;
+	*reinterpret_cast<DWORD* const>(this->m_bypGateway + this->m_HookLength + 1u) = ptrRelativeOffset;
 
 	return(
 		utils::memory::detour32(

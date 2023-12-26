@@ -165,7 +165,7 @@ bool CWindow::setTitle(
 	}
 
 	try {
-		this->m_tcstrOriginalWindowTitle = new TCHAR[(iOriginalWindowTitleLength / sizeof(TCHAR)) + 1];
+		this->m_tcstrOriginalWindowTitle = new TCHAR[iOriginalWindowTitleLength];
 	}
 	catch (const std::bad_alloc&) {
 		return false;

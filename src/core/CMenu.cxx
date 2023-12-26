@@ -9,6 +9,8 @@ import CWindow;
 import<filesystem>;
 
 #include<Windows.h>
+// SHGetKnownFolderPath
+#include<ShlObj_core.h>
 
 #include<gl/GL.h>
 #pragma comment(lib, "opengl32.lib")
@@ -50,23 +52,24 @@ CMenu::CMenu(
         return;
     }
 
-    char* cstrAppdataPath = nullptr;
-
+    wchar_t* wcstrAppdataPath = nullptr;
+    
     if (
-        // Duplicate the AppData environment variable securely
-        std::size_t bufferCount = NULL;
-        _dupenv_s(
-            &cstrAppdataPath,
-            &bufferCount,
-            "APPDATA"
-        ) ||
-        !cstrAppdataPath
+        FAILED(
+            SHGetKnownFolderPath(
+                ::FOLDERID_RoamingAppData,
+                KNOWN_FOLDER_FLAG::KF_FLAG_DEFAULT,
+                nullptr,
+                &wcstrAppdataPath
+            )
+        )
     )
     {
+        CoTaskMemFree(wcstrAppdataPath);
         return;
     }
 
-    this->m_filePath = std::filesystem::path{ cstrAppdataPath };
+    this->m_filePath = std::filesystem::path{ wcstrAppdataPath };
     this->m_filePath.append(cstrName);
 
     const auto tryCreatingDirectory = [this](const std::filesystem::path& path) noexcept -> bool {
@@ -81,12 +84,12 @@ CMenu::CMenu(
 
     if (tryCreatingDirectory(this->m_filePath)) {
         this->m_bOk = true;
-        free(cstrAppdataPath);
+        CoTaskMemFree(wcstrAppdataPath);
         return;
     }
 
     for (std::uint8_t i = NULL; i < UCHAR_MAX; ++i) {
-        const std::filesystem::path newPathAttempt = this->m_filePath / (" (" + std::to_string(i) + ')');
+        const std::filesystem::path newPathAttempt = this->m_filePath / (L" (" + std::to_wstring(i) + L')');
 
         if (!tryCreatingDirectory(newPathAttempt)) {
             continue;
@@ -97,7 +100,7 @@ CMenu::CMenu(
         break;
     }
 
-    free(cstrAppdataPath);
+    CoTaskMemFree(wcstrAppdataPath);
 }
 
 CMenu::~CMenu( void ) noexcept {
@@ -106,7 +109,7 @@ CMenu::~CMenu( void ) noexcept {
         refOriginalWndProc
     )
     {
-        CMenu::_AssaultCubeWindow.setWndProc(refOriginalWndProc);
+        CMenu::_AssaultCubeWindow.restoreOriginalWndProc();
         ImGui_ImplOpenGL2_Shutdown();
         ImGui_ImplWin32_Shutdown();
         ImGui::DestroyContext();

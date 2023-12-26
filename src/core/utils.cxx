@@ -9,6 +9,74 @@ import<tchar.h>;
 import<cassert>;
 
 import globals;
+import signatures;
+
+[[nodiscard]]
+_Must_inspect_result_
+_Ret_maybenull_
+_Success_(return != nullptr)
+std::uint8_t* const utils::memory::findSignature(
+	_In_ const HMODULE hModule,
+	_In_reads_(patternLength) const SignatureData_t& signatureData,
+	_In_ const std::size_t patternLength
+) noexcept
+{
+#ifdef _DEBUG
+	const BYTE* const& cstrPattern = std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_PATTERN>(signatureData);
+	const char* const& cstrMask = std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_MASK>(signatureData);
+	const std::size_t actualMaskLength = std::strlen(cstrMask);
+
+
+	assert(
+		hModule &&
+		(
+			reinterpret_cast<const std::uintptr_t>(hModule) >= (
+				offsetof(IMAGE_DOS_HEADER, e_lfanew) +
+				sizeof(IMAGE_DOS_HEADER::e_lfanew)
+			)
+		) &&
+		patternLength > NULL &&
+		reinterpret_cast<const std::uintptr_t>(hModule) >= patternLength &&
+		cstrPattern && cstrPattern[NULL] != static_cast<const BYTE>('\0') &&
+		cstrMask && cstrMask[NULL] != '\0' &&
+		actualMaskLength == patternLength
+	);
+
+	for (std::size_t i = NULL; i < patternLength; ++i) {
+		const char& cRefMaskValue = cstrMask[i];
+
+		assert(cRefMaskValue == '?' || cRefMaskValue == 'x');
+	}
+#endif // _DEBUG
+
+	const std::uint8_t* const comparableModuleEnd = reinterpret_cast<const std::uint8_t* const>(
+		reinterpret_cast<const std::uint8_t* const>(hModule) +
+		reinterpret_cast<const IMAGE_NT_HEADERS* const>(
+			reinterpret_cast<const std::uint8_t* const>(hModule) +
+			reinterpret_cast<const IMAGE_DOS_HEADER* const>(hModule)->e_lfanew
+		)->OptionalHeader.SizeOfImage -
+		patternLength
+	);
+
+	for (std::uint8_t* pBase = reinterpret_cast<std::uint8_t* const>(hModule); pBase < comparableModuleEnd; ++pBase) {
+		for (std::uintptr_t patternComparisonPointer = NULL; patternComparisonPointer < patternLength; ++patternComparisonPointer) {
+			if (
+				'x' == std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_MASK>(signatureData)[patternComparisonPointer] &&
+				pBase[patternComparisonPointer] != std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_PATTERN>(signatureData)[patternComparisonPointer]
+			)
+			{
+				goto invalidPattern;
+			}
+		}
+
+		return pBase;
+
+	invalidPattern:
+		continue;
+	}
+
+	return nullptr;
+}
 
 [[nodiscard]]
 _Check_return_
@@ -30,7 +98,10 @@ bool utils::memory::isExecutableRegion(
 					&memoryRegionInformation,
 					sizeof(MEMORY_BASIC_INFORMATION)
 				)
-			) >= (offsetof(MEMORY_BASIC_INFORMATION, Protect) + sizeof(MEMORY_BASIC_INFORMATION::Protect))
+			) >= (
+				offsetof(MEMORY_BASIC_INFORMATION, Protect) +
+				sizeof(MEMORY_BASIC_INFORMATION::Protect)
+			)
 		) &&
 		memoryRegionInformation.Protect &
 		(
@@ -218,11 +289,13 @@ bool utils::math::worldToScreen(
 	_Out_ CVector2& vecRef2Screen
 ) noexcept
 {
+	const std::array<const float, 4 * 4>& fArrRefModelViewProjectionMatrix = *globals::screen::pfArrModelViewProjectionMatrix;
+
 	const float fClipCoordinateW = (
-		vec3RefWorld.x * globals::screen::pModelViewProjectionMatrix[3u] +
-		vec3RefWorld.y * globals::screen::pModelViewProjectionMatrix[7u] +
-		vec3RefWorld.z * globals::screen::pModelViewProjectionMatrix[11u] +
-		globals::screen::pModelViewProjectionMatrix[15u]
+		vec3RefWorld.x * fArrRefModelViewProjectionMatrix[3u] +
+		vec3RefWorld.y * fArrRefModelViewProjectionMatrix[7u] +
+		vec3RefWorld.z * fArrRefModelViewProjectionMatrix[11u] +
+		fArrRefModelViewProjectionMatrix[15u]
 	);
 
 	if (fClipCoordinateW < 0.1f) {
@@ -231,16 +304,16 @@ bool utils::math::worldToScreen(
 
 	const CVector2 vec2NormalizedDeviceCoordinates = CVector2{
 		(
-			vec3RefWorld.x * globals::screen::pModelViewProjectionMatrix[NULL] +
-			vec3RefWorld.y * globals::screen::pModelViewProjectionMatrix[4u] +
-			vec3RefWorld.z * globals::screen::pModelViewProjectionMatrix[8u] +
-			globals::screen::pModelViewProjectionMatrix[12u]
+			vec3RefWorld.x * fArrRefModelViewProjectionMatrix[NULL] +
+			vec3RefWorld.y * fArrRefModelViewProjectionMatrix[4u] +
+			vec3RefWorld.z * fArrRefModelViewProjectionMatrix[8u] +
+			fArrRefModelViewProjectionMatrix[12u]
 		) / fClipCoordinateW,
 		(
-			vec3RefWorld.x * globals::screen::pModelViewProjectionMatrix[1u] +
-			vec3RefWorld.y * globals::screen::pModelViewProjectionMatrix[5u] +
-			vec3RefWorld.z * globals::screen::pModelViewProjectionMatrix[9u] +
-			globals::screen::pModelViewProjectionMatrix[13u]
+			vec3RefWorld.x * fArrRefModelViewProjectionMatrix[1u] +
+			vec3RefWorld.y * fArrRefModelViewProjectionMatrix[5u] +
+			vec3RefWorld.z * fArrRefModelViewProjectionMatrix[9u] +
+			fArrRefModelViewProjectionMatrix[13u]
 		) / fClipCoordinateW
 	};
 

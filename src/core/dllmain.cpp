@@ -4,8 +4,6 @@
 #endif // !WIN32
 
 #include<Windows.h>
-#include<iostream>
-#include<tuple>
 
 // utility functions
 import utils;
@@ -13,14 +11,14 @@ import utils;
 import playerent;
 // offsets and memory addresses
 import offsets;
-// CRenderer class
-import CRenderer;
 // globals namespace
 import globals;
-// CTraceRay function pointer initialisation
-import CTraceRay;
 // patterns to find in AssaultCube's source code
 import signatures;
+// CRenderer class
+import CRenderer;
+// CTraceRay function pointer initialisation
+import CTraceRay;
 
 // hooking
 import hooks;
@@ -36,113 +34,130 @@ namespace globals {
     static const CRenderer* pRenderer = nullptr;
 }
 
+static __declspec(noreturn) void exitMessageBox(
+    _In_ void* const vpInstDLL,
+    _In_z_ const char* const cstrMessage,
+    _In_ const DWORD dwExitCode
+) noexcept
+{
+    assert(cstrMessage);
+
+    MessageBoxA(
+        nullptr,
+        cstrMessage,
+        "Error",
+        (MB_ICONERROR | MB_OK)
+    );
+
+    FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
+}
+
+static __declspec(noreturn) void exitPopupMessage(
+    _In_ void* const vpInstDLL,
+    _In_z_ const char* const cstrMessage,
+    _In_ const DWORD dwExitCode
+) noexcept
+{
+    assert(cstrMessage);
+
+    (*globals::function::pPopupMessage)(cstrMessage);
+
+    FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
+}
+
 static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
 ) noexcept
 {
-    globals::entity::pLocalPlayer = *reinterpret_cast<playerent* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
+    globals::entity::pLocalPlayer = *reinterpret_cast<playerent* const* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::LOCAL_PLAYER);
 
-    const auto exitSecure = [&vpInstDLL](_In_z_ const TCHAR* const tcstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void {
-        assert(tcstrMessage);
+    typedef void(*exit_t)(_In_ void* const, _In_z_ const char* const, _In_ const DWORD) noexcept;
 
-        MessageBox(
-            nullptr,
-            tcstrMessage,
-            __TEXT("Error"),
-            (MB_ICONERROR | MB_OK)
-        );
-
-        FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
-    };
+    exit_t pExit = &exitMessageBox;
 
     try {
         globals::pRenderer = new CRenderer{ "nvrlose client (Assault Cube)" };
     }
     catch (const std::bad_alloc&) {
-        exitSecure(__TEXT("Failed to allocate enough memory to hold the \"CRenderer\"-class!"), ERROR_NOT_ENOUGH_MEMORY);
+        (*pExit)(vpInstDLL, "Failed to allocate enough memory to hold the \"CRenderer\"-class!", ERROR_NOT_ENOUGH_MEMORY);
     }
 
     if (!globals::pRenderer->ok()) {
-        exitSecure(__TEXT("Failed to make in-game-rendering possible!"), ERROR_FUNCTION_FAILED);
+        (*pExit)(vpInstDLL, "Failed to make in-game-rendering possible!", ERROR_FUNCTION_FAILED);
     }
 
     if (
         !(
             globals::function::pPopupMessage = reinterpret_cast<const globals::function::definition::_popupMessage_t>(
                 utils::memory::findSignature(
-                    reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
+                    globals::modules::ac_client_exe.asHandle,
                     signatures::function::popupMessage
                 )
             )
         )
     )
     {
-        exitSecure(__TEXT("Failed to find function popupMessage"), ERROR_NOT_FOUND);
+        (*pExit)(vpInstDLL, "Failed to find function popupMessage", ERROR_NOT_FOUND);
     }
 
-    const auto exit = [&vpInstDLL](_In_z_ const char* const cstrMessage, _In_ const DWORD dwExitCode) noexcept -> __declspec(noreturn) void{
-        assert(cstrMessage);
+    pExit = &exitPopupMessage;
+    
+    void* vpUnknownFunction = nullptr;
+    void* vpHealthOpCode = nullptr;
+    void* vpShootFunction = nullptr;
 
-        (*globals::function::pPopupMessage)(cstrMessage);
+    constexpr const std::uint8_t PATTERNS_TO_FIND = 6;
 
-        FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
+    const std::array<const std::pair<const SignatureData_t&, void** const>, PATTERNS_TO_FIND> patterns = std::array<const std::pair<const SignatureData_t&, void** const>, PATTERNS_TO_FIND>{
+        std::make_pair<const SignatureData_t&, void** const>(
+            signatures::function::traceLine,
+            reinterpret_cast<void** const>(&CTraceRay::_pTraceLineFn)
+        ),
+        std::make_pair<const SignatureData_t&, void** const>(
+            signatures::function::isVisible,
+            reinterpret_cast<void** const>(&CTraceRay::_pIsVisibleFn)
+        ),
+        std::make_pair<const SignatureData_t&, void** const>(
+            signatures::function::intersect,
+            reinterpret_cast<void** const>(&CTraceRay::_pIntersectFn)
+        ),
+        std::make_pair<const SignatureData_t&, void** const>(
+            signatures::function::unknown,
+            &vpUnknownFunction
+        ),
+        std::make_pair<const SignatureData_t&, void** const>(
+            signatures::code::health,
+            &vpHealthOpCode
+        ),
+        std::make_pair<const SignatureData_t&, void** const>(
+            signatures::function::shoot,
+            &vpShootFunction
+        )
     };
 
-    if (
-        !(
-            CTraceRay::_pTraceLineFn = reinterpret_cast<const CTraceRay::_traceLine_t>(
-                utils::memory::findSignature(
-                    reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-                    signatures::function::traceLine
-                )
-            )
-        ) ||
-        !(
-            CTraceRay::_pIsVisibleFn = reinterpret_cast<const CTraceRay::_entityIsVisible_t>(
-                utils::memory::findSignature(
-                    reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-                    signatures::function::isVisible
-                )
-            )
-        ) ||
-        !(
-            CTraceRay::_pIntersectFn = reinterpret_cast<const CTraceRay::_intersect_t>(
-                utils::memory::findSignature(
-                    reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-                    signatures::function::intersect
+    for (const std::pair<const SignatureData_t&, void** const>& refPattern : patterns) {
+        typedef enum : std::uint8_t {
+            SIGNATURE_INDEX_DATA = NULL,
+            SIGNATURE_INDEX_POINTER
+        }SIGNATURE_INDEX;
+
+        assert(std::get<SIGNATURE_INDEX::SIGNATURE_INDEX_POINTER>(refPattern));
+
+        void*& vpRefNewValue = *std::get<SIGNATURE_INDEX::SIGNATURE_INDEX_POINTER>(refPattern);
+
+        if (
+            const SignatureData_t& refSignatureData = std::get<SIGNATURE_INDEX::SIGNATURE_INDEX_DATA>(refPattern);
+            !(
+                vpRefNewValue = utils::memory::findSignature(
+                    globals::modules::ac_client_exe.asHandle,
+                    refSignatureData,
+                    std::strlen(std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_MASK>(refSignatureData))
                 )
             )
         )
-    )
-    {
-        exit("Failed to find functions", ERROR_NOT_FOUND);
-    }
-
-    void* const vpUnknownFunction = utils::memory::findSignature(
-        reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-        signatures::function::unknown
-    );
-
-    if (!vpUnknownFunction) {
-        exit("Failed to fund unknown function lol", ERROR_NOT_FOUND);
-    }
-
-    void* const vpHealthOpCode = utils::memory::findSignature(
-        reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-        signatures::code::health
-    );
-
-    if (!vpHealthOpCode) {
-        exit("Failed to find health opcode", ERROR_NOT_FOUND);
-    }
-
-    void* const vpShootFunction = utils::memory::findSignature(
-        reinterpret_cast<const HMODULE>(globals::modules::ac_client_exe),
-        signatures::function::shoot
-    );
-
-    if (!vpShootFunction) {
-        exit("Failed to find function shoot", ERROR_NOT_FOUND);
+        {
+            (*pExit)(vpInstDLL, "Failed to analyse Assault Cube", ERROR_NOT_FOUND);
+        }
     }
 
     try {
@@ -162,7 +177,7 @@ static DWORD CALLBACK MainThread(
         };
     }
     catch (const std::bad_alloc&) {
-        exit("Failed to allocate enough memory to hold the hook classes", ERROR_NOT_ENOUGH_MEMORY);
+        (*pExit)(vpInstDLL, "Failed to allocate enough memory to hold the hook classes", ERROR_NOT_ENOUGH_MEMORY);
     }
 
     if (
@@ -171,7 +186,7 @@ static DWORD CALLBACK MainThread(
         !(std::get<HOOK_INDEX::HOOK_INDEX_JUMP_BACK_ADDRESS>(hooks::unknownOpcode) = std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode)->attach(std::get<HOOK_INDEX::HOOK_INDEX_FUNCTION>(hooks::unknownOpcode)))
     )
     {
-        exit("Failed to instantiate hooks", ERROR_FUNCTION_FAILED);
+        (*pExit)(vpInstDLL, "Failed to instantiate hooks", ERROR_FUNCTION_FAILED);
     }
 
     CRenderer::_bCanSafelyRender = true;
@@ -199,7 +214,7 @@ BOOL APIENTRY DllMain(
     {
         typedef std::remove_all_extents<decltype(tcstrErrorMessage)>::type errorType_t;
 
-        const auto exit = [&hInstDLL](const errorType_t* const tcstrError) noexcept -> __declspec(noreturn) void {
+        const auto exit = [&hInstDLL](_In_z_ const errorType_t* const tcstrError) noexcept -> __declspec(noreturn) void{
             assert(
                 tcstrError &&
                 tcstrError[NULL] != __TEXT('\0') &&
@@ -226,7 +241,11 @@ BOOL APIENTRY DllMain(
             FreeLibrary(hInstDLL);
         };
 
-        if(!globals::modules::ac_client_exe) {
+        DisableThreadLibraryCalls(hInstDLL);
+
+        if (!globals::modules::ac_client_exe.asBytePtr) {
+            SetLastError(ERROR_MOD_NOT_FOUND);
+
             exit(
                 (
                     __TEXT("Failed to retrieve module \"ac_client.exe\" because you injected me into \"") +
@@ -235,8 +254,6 @@ BOOL APIENTRY DllMain(
                 ).c_str()
             );
         }
-
-        DisableThreadLibraryCalls(hInstDLL);
 
         const HANDLE hThread = CreateThread(
             nullptr,
@@ -252,14 +269,22 @@ BOOL APIENTRY DllMain(
         }
 
         SetThreadDescription(hThread, L"nvrlose client main");
-        
-        ResumeThread(hThread);
+
+        DWORD dwSuspendCount = NULL;
+
+        do {
+            if ((dwSuspendCount = ResumeThread(hThread)) != ((DWORD)(-1))) {
+                continue;
+            }
+
+            CloseHandle(hThread);
+            exit(__TEXT("Failed to resume the main thread"));
+        } while (dwSuspendCount > 1);
 
         CloseHandle(hThread);
     }
         break;
     case DLL_PROCESS_DETACH:
-    {
         if (tcstrErrorMessage[NULL] != __TEXT('\0')) {
             MessageBox(
                 nullptr,
@@ -293,7 +318,7 @@ BOOL APIENTRY DllMain(
         else if (globals::pRenderer) {
             delete globals::pRenderer;
         }
-    }
+    
         break;
     default:
         break;

@@ -9,7 +9,7 @@ import CVector2;
 import globals;
 
 void gl::setupOrtho( void ) noexcept {
-	glGetIntegerv(GL_VIEWPORT, globals::screen::viewPort);
+	glGetIntegerv(GL_VIEWPORT, globals::screen::viewPort.data());
 
 	glPushMatrix();
 	glMatrixMode(GL_PROJECTION);

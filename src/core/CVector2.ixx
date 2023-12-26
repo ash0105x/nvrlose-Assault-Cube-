@@ -3,14 +3,9 @@ export module CVector2;
 import<sal.h>;
 import<compare>;
 
-class CVector2;
-export typedef CVector2 vec2;
-export typedef CVector2 vec2_t;
-export typedef CVector2 Vector2;
-
 export class CVector2 final {
 public:
-	[[nodiscard]] CVector2(
+	[[nodiscard]] constexpr CVector2(
 		_In_ const float x = 0.f,
 		_In_ const float y = 0.f
 	) noexcept;

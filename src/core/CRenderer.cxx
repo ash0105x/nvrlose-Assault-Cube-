@@ -95,7 +95,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     arial.drawf(
         CVector2{
             0.f,
-            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT - 3)
+            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT)
         },
         ARR_WHITE,
         "Thread Id: %d (0x%xl)",
@@ -118,7 +118,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
-    globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe + offsets::ac_client_exe::pointer::ENTITY_LIST);
+    globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::ENTITY_LIST);
 
     const auto renderMenu = []( void ) noexcept -> void {
         gl::restoreOrtho();
@@ -282,7 +282,8 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
         if (
             !modules::combat::aimbot::bToggle ||
-            globals::entity::pLocalPlayer->iHealth <= NULL
+            globals::entity::pLocalPlayer->iHealth <= NULL ||
+            globals::entity::pLocalPlayer->uPlayerState == PLAYER_STATE::PLAYER_STATE_GHOST
         )
         {
             if (modules::visuals::ESP::bToggle || modules::visuals::snaplines::bToggle) {

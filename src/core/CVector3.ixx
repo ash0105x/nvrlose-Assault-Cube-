@@ -5,15 +5,9 @@ import CVector2;
 import<sal.h>;
 import<compare>;
 
-class CVector3;
-export typedef CVector3 vec3;
-export typedef CVector3 vec3_t;
-export typedef CVector3 Vector3;
-export typedef CVector3 CVector;
-
 export class CVector3 final {
 public:
-	[[nodiscard]] CVector3(
+	[[nodiscard]] constexpr CVector3(
 		_In_ const float x = 0.f,
 		_In_ const float y = 0.f,
 		_In_ const float z = 0.f

@@ -16,56 +16,27 @@ import signatures;
 
 export namespace utils {
 	namespace memory {
+		[[nodiscard]]
+		_Must_inspect_result_
+		_Ret_maybenull_
+		_Success_(return != nullptr)
+		std::uint8_t* const findSignature(
+			_In_ const HMODULE hModule,
+			_In_reads_(patternLength) const SignatureData_t& signatureData,
+			_In_ const std::size_t patternLength
+		) noexcept;
+
 		template<std::size_t t_patternLength>
 		[[nodiscard]]
 		_Must_inspect_result_
 		_Ret_maybenull_
 		_Success_(return != nullptr)
-		constexpr std::uint8_t* const findSignature(
+		std::uint8_t* const findSignature(
 			_In_ const HMODULE hModule,
-			_In_ const SignatureData_t<t_patternLength>& signatureData
+			_In_ const SignatureDataEx_t<t_patternLength>& signatureData
 		) noexcept
 		{
-			assert(
-				hModule &&
-				reinterpret_cast<const std::uintptr_t>(hModule) > offsetof(IMAGE_DOS_HEADER, e_lfanew) &&
-				reinterpret_cast<const std::uintptr_t>(hModule) > t_patternLength
-			);
-
-//#ifdef _DEBUG
-//			for (std::size_t i = NULL; i < t_patternLength; ++i) {
-//				const char& cRefMaskValue = cstrMask[i];
-//
-//				assert(cRefMaskValue == '?' || cRefMaskValue == 'x');
-//			}
-//#endif // _DEBUG
-
-			const std::uint8_t* const comparableModuleEnd = reinterpret_cast<const std::uint8_t* const>(
-				reinterpret_cast<const std::uint8_t* const>(hModule) +
-				reinterpret_cast<const IMAGE_NT_HEADERS* const>(
-					reinterpret_cast<const std::uint8_t* const>(hModule) +
-					reinterpret_cast<const IMAGE_DOS_HEADER* const>(hModule)->e_lfanew
-				)->OptionalHeader.SizeOfImage - t_patternLength
-			);
-
-			for (std::uint8_t* pBase = reinterpret_cast<std::uint8_t* const>(hModule); pBase < comparableModuleEnd; ++pBase) {
-				for (std::uintptr_t patternComparisonPointer = NULL; patternComparisonPointer < t_patternLength; ++patternComparisonPointer) {
-					if (
-						'x' == std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_MASK>(signatureData)[patternComparisonPointer] &&
-						pBase[patternComparisonPointer] != std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_PATTERN>(signatureData)[patternComparisonPointer]
-					)
-					{
-						goto invalidPattern;
-					}
-				}
-
-				return pBase;
-				
-			invalidPattern:
-				continue;
-			}
-
-			return nullptr;
+			return utils::memory::findSignature(hModule, signatureData, t_patternLength - 1);
 		}
 
 		[[nodiscard]]
@@ -89,7 +60,7 @@ export namespace utils {
 		_Must_inspect_result_
 		void* const findDMAAddress(
 			void* const vpStart,
-			const std::array<std::ptrdiff_t, t_OffsetCount>& arrOffsets
+			const std::array<const std::ptrdiff_t, t_OffsetCount>& arrOffsets
 		) noexcept
 		{
 			assert(vpStart);
