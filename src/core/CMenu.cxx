@@ -190,6 +190,10 @@ void CMenu::drawMain( void ) noexcept {
     }
 
     ImGui::Checkbox("Aimbot", &modules::combat::aimbot::bToggle);
+    ImGui::SliderFloat("Aimbot FOV", &modules::combat::aimbot::fFOV, 5.f, 360.f);
+    ImGui::Checkbox("Ignore FOV", &modules::combat::aimbot::bIgnoreFOV);
+    ImGui::Checkbox("Draw FOV", &modules::combat::aimbot::bDrawFOV);
+    ImGui::SliderFloat("Aimbot speed", &modules::combat::aimbot::fSpeed, 0.0f, 1.f);
     ImGui::Checkbox("Snaplines", &modules::visuals::snaplines::bToggle);
     ImGui::SliderFloat("Snaplines distance", &modules::visuals::snaplines::fDistance, modules::visuals::snaplines::MIN_DISTANCE, modules::visuals::snaplines::MAX_DISTANCE);
     ImGui::Checkbox("ESP", &modules::visuals::ESP::bToggle);

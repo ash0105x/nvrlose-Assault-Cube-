@@ -24,4 +24,12 @@ export namespace gl {
 		_In_ const GLubyte (&arrColor)[4],
 		_In_ const float fWidth
 	) noexcept;
+
+	void drawCircle(
+		_In_ const CVector2& vec2RefPosition,
+		_In_ const std::uint32_t uRadius,
+		_In_ const std::uint8_t uVertices,
+		_In_ const GLubyte(&arrColor)[4],
+		_In_ const float fWidth
+	) noexcept;
 }

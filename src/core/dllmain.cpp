@@ -38,32 +38,13 @@ static __declspec(noreturn) void exitMessageBox(
     _In_ void* const vpInstDLL,
     _In_z_ const char* const cstrMessage,
     _In_ const DWORD dwExitCode
-) noexcept
-{
-    assert(cstrMessage);
-
-    MessageBoxA(
-        nullptr,
-        cstrMessage,
-        "Error",
-        (MB_ICONERROR | MB_OK)
-    );
-
-    FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
-}
+) noexcept;
 
 static __declspec(noreturn) void exitPopupMessage(
     _In_ void* const vpInstDLL,
     _In_z_ const char* const cstrMessage,
     _In_ const DWORD dwExitCode
-) noexcept
-{
-    assert(cstrMessage);
-
-    (*globals::function::pPopupMessage)(cstrMessage);
-
-    FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
-}
+) noexcept;
 
 static DWORD CALLBACK MainThread(
     _In_ void* const vpInstDLL
@@ -108,7 +89,7 @@ static DWORD CALLBACK MainThread(
 
     constexpr const std::uint8_t PATTERNS_TO_FIND = 6;
 
-    const std::array<const std::pair<const SignatureData_t&, void** const>, PATTERNS_TO_FIND> patterns = std::array<const std::pair<const SignatureData_t&, void** const>, PATTERNS_TO_FIND>{
+    const std::array<const std::pair<const SignatureData_t&, void** const>, PATTERNS_TO_FIND> arrPatterns = std::array<const std::pair<const SignatureData_t&, void** const>, PATTERNS_TO_FIND>{
         std::make_pair<const SignatureData_t&, void** const>(
             signatures::function::traceLine,
             reinterpret_cast<void** const>(&CTraceRay::_pTraceLineFn)
@@ -135,7 +116,7 @@ static DWORD CALLBACK MainThread(
         )
     };
 
-    for (const std::pair<const SignatureData_t&, void** const>& refPattern : patterns) {
+    for (const std::pair<const SignatureData_t&, void** const>& refPattern : arrPatterns) {
         typedef enum : std::uint8_t {
             SIGNATURE_INDEX_DATA = NULL,
             SIGNATURE_INDEX_POINTER
@@ -325,4 +306,35 @@ BOOL APIENTRY DllMain(
     }
 
     return TRUE;
+}
+
+static __declspec(noreturn) void exitMessageBox(
+    _In_ void* const vpInstDLL,
+    _In_z_ const char* const cstrMessage,
+    _In_ const DWORD dwExitCode
+) noexcept
+{
+    assert(cstrMessage);
+
+    MessageBoxA(
+        nullptr,
+        cstrMessage,
+        "Error",
+        (MB_ICONERROR | MB_OK)
+    );
+
+    FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
+}
+
+static __declspec(noreturn) void exitPopupMessage(
+    _In_ void* const vpInstDLL,
+    _In_z_ const char* const cstrMessage,
+    _In_ const DWORD dwExitCode
+) noexcept
+{
+    assert(cstrMessage);
+
+    (*globals::function::pPopupMessage)(cstrMessage);
+
+    FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
 }

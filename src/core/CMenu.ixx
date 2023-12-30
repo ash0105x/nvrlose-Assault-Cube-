@@ -23,7 +23,7 @@ public:
 public:
 	static bool initialize( void ) noexcept;
 public:
-	static inline bool _bOpen = false;
+	static inline bool _bOpen = true;
 private:
 	/*
 	* source:

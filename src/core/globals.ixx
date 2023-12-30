@@ -45,7 +45,7 @@ export namespace globals {
 
 	namespace screen {
 		std::array<std::int32_t, 4> viewPort = std::array<std::int32_t, 4>{  };
-		const std::array<const float, 4 * 4>* const pfArrModelViewProjectionMatrix = reinterpret_cast<const std::array<const float, 4 * 4>*const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::MODEL_VIEW_PROJECTION_MATRIX);
+		const std::array<const float, 4 * 4>* const pfArrModelViewProjectionMatrix = reinterpret_cast<const std::array<const float, 4 * 4>* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::MODEL_VIEW_PROJECTION_MATRIX);
 		CVector3* const pvec3CurrentWeaponEndTrajectory = reinterpret_cast<CVector3* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::VEC3_CURRENT_WEAPON_END_TRAJECTORY);
 	}
 

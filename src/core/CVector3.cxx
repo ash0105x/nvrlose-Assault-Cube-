@@ -6,6 +6,7 @@ import<sal.h>;
 import<cassert>;
 
 #include<math.h>
+#include<cmath>
 
 [[nodiscard]] constexpr CVector3::CVector3(
 	_In_ const float x,

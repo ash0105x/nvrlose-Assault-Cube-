@@ -7,7 +7,8 @@ import utils;
 
 import<cassert>;
 
-[[nodiscard]] CTrampolineHook32::CTrampolineHook32(
+[[nodiscard]]
+CTrampolineHook32::CTrampolineHook32(
 	[[maybe_unused]] _In_ std::nullptr_t
 ) noexcept
 { }

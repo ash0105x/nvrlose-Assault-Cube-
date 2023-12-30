@@ -5,6 +5,9 @@ import gl;
 #include<gl/GL.h>
 #pragma comment(lib, "opengl32.lib")
 
+#include<cmath>
+#include<numbers>
+
 import CVector2;
 import globals;
 
@@ -81,4 +84,35 @@ void gl::drawLineRGBA(
 	glLineWidth(fWidth);
 
 	_drawLine(vec2Start, vec2End);
+}
+
+void gl::drawCircle(
+	_In_ const CVector2& vec2RefPosition,
+	_In_ const std::uint32_t uRadius,
+	_In_ const std::uint8_t uVertices,
+	_In_ const GLubyte(&arrColor)[4],
+	_In_ const float fWidth
+) noexcept
+{
+	glColor4ub(
+		arrColor[NULL],
+		arrColor[1],
+		arrColor[2],
+		arrColor[3]
+	);
+
+	glLineWidth(fWidth);
+
+	glBegin(GL_LINE_LOOP);
+
+	for (float i = 0.f; i < uVertices; ++i) {
+		const float fAngle = 2.f * std::numbers::pi_v<float> * i / static_cast<const float>(uVertices);
+
+		glVertex2f(
+			vec2RefPosition.x + uRadius * std::cos(fAngle),
+			vec2RefPosition.y + uRadius * std::sin(fAngle)
+		);
+	}
+
+	glEnd();
 }

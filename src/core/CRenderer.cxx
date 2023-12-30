@@ -76,11 +76,17 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 	_In_ const HDC hDC
 ) noexcept
 {
-    static const bool bInitImGuiOnce = []( void ) noexcept -> bool {
-        return CMenu::initialize();
+    static const bool bInitOnce = []( void ) noexcept -> bool {
+        const bool bReturnValue = CMenu::initialize();
+
+        if (!bReturnValue) {
+            (*globals::function::pPopupMessage)("Failed to initialize renderings");
+        }
+
+        return bReturnValue;
     }();
 
-    if (!bInitImGuiOnce) {
+    if (!bInitOnce) {
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
@@ -137,15 +143,15 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     const std::chrono::steady_clock::time_point currentTimePoint = std::chrono::steady_clock::now();
 
+    const CVector2 vec2MiddleScreen = CVector2{
+        static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]) / 2.f,
+        static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT]) / 2.f
+    };
+
     if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTimePoint - globals::lastHitTimer).count() <= 250) {
         constexpr const float LINE_LENGTH = 7.f;
         constexpr const float MIDDLE_PADDING = 5.f;
         constexpr const float HITMARKER_LINE_WIDTH = 0.5f;
-
-        const CVector2 vec2MiddleScreen = CVector2{
-            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]) / 2.f,
-            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT]) / 2.f
-        };
 
         for (std::uint32_t i = 1; i < 3; ++i) {
             const float fAdjustedAngle = static_cast<const float>(i * 45);
@@ -212,10 +218,10 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_HEALTH_REMAINING>(refEntityHit)
         );
     }
-    
-    float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
 
+    float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
     CVector3 vec3Delta = CVector3{ };
+    float fAimbotFOV = std::numeric_limits<float>::max();
 
     for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
         const playerent& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
@@ -301,17 +307,62 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             continue;
         }
 
-        fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
+        if (modules::combat::aimbot::bIgnoreFOV) {
+            if (fCurrentPlayerDistanceToLocalPlayer >= fPlayerDistanceToLocalPlayer) {
+                continue;
+            }
+
+            fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
+            vec3Delta = vec3CurrentPlayerDelta;
+
+            continue;
+        }
+
+        CVector2 vec2EnemyWorldPosition = CVector2{ };
+        if (!utils::math::worldToScreen(refCurrentPlayer.vec3EyePosition, vec2EnemyWorldPosition)) {
+            continue;
+        }
+
+        const float fCurrentPlayerAimbotFOV = vec2MiddleScreen.distance(vec2EnemyWorldPosition);
+
+        if (fCurrentPlayerAimbotFOV > modules::combat::aimbot::fFOV || fCurrentPlayerAimbotFOV > fAimbotFOV) {
+            continue;
+        }
+
+        fAimbotFOV = fCurrentPlayerAimbotFOV;
         vec3Delta = vec3CurrentPlayerDelta;
     }
 
-    if (std::numeric_limits<float>::max() != fPlayerDistanceToLocalPlayer) {
+    if (modules::combat::aimbot::bIgnoreFOV) {
+        if (std::numeric_limits<float>::max() != fPlayerDistanceToLocalPlayer) {
+            globals::entity::pLocalPlayer->vec2ViewAngles = CVector2{
+                // opp. / adj.
+                atan2f(vec3Delta.y, vec3Delta.x) * CVector3::fDegreesRadiansConversionValue + 90.f,
+                // opp. / hyp.
+                asinf(vec3Delta.z / fPlayerDistanceToLocalPlayer) * CVector3::fDegreesRadiansConversionValue
+            }.scale(modules::combat::aimbot::fSpeed);
+        }
+    }
+    else if (std::numeric_limits<float>::max() != fAimbotFOV) {
         globals::entity::pLocalPlayer->vec2ViewAngles = CVector2{
             // opp. / adj.
             atan2f(vec3Delta.y, vec3Delta.x) * CVector3::fDegreesRadiansConversionValue + 90.f,
             // opp. / hyp.
-            asinf(vec3Delta.z / fPlayerDistanceToLocalPlayer) * CVector3::fDegreesRadiansConversionValue
+            asinf(vec3Delta.z / vec3Delta.length()) * CVector3::fDegreesRadiansConversionValue
         };
+    }
+
+    if (modules::combat::aimbot::bToggle && modules::combat::aimbot::bDrawFOV && !modules::combat::aimbot::bIgnoreFOV) {
+        constexpr const GLubyte ARR_RED[4u] = { 255, NULL, NULL, 255 };
+
+
+        gl::drawCircle(
+            vec2MiddleScreen,
+            static_cast<const std::uint32_t>(modules::combat::aimbot::fFOV),
+            40,
+            ARR_RED,
+            0.1f
+        );
     }
 
     renderMenu();
