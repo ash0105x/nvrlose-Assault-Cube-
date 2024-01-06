@@ -6,8 +6,7 @@ export namespace modules {
 			inline bool bToggle = false;
 			inline float fFOV = 200.f;
 			inline bool bIgnoreFOV = false;
-			inline bool bDrawFOV = false;
-			inline float fSpeed = 0.f;
+			inline bool bDrawFOV = true;
 		}
 	}
 }

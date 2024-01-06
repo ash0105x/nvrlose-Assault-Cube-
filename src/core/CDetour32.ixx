@@ -6,10 +6,12 @@ import IHook;
 
 export class CDetour32 final : public IHook {
 public:
-	[[nodiscard]] explicit CDetour32(
+	[[nodiscard]]
+	explicit CDetour32(
 		[[maybe_unused]] _In_ std::nullptr_t = nullptr
 	) noexcept;
-	[[nodiscard]] explicit CDetour32(
+	[[nodiscard]]
+	explicit CDetour32(
 		_In_ void* const vpHookAddress,
 		_In_ const size_t hookLength
 	) noexcept;

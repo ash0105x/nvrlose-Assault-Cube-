@@ -6,12 +6,14 @@ import CWindow;
 import<type_traits>;
 import<cassert>;
 
-[[nodiscard]] CWindow::CWindow(
+[[nodiscard]]
+CWindow::CWindow(
 	[[maybe_unused]] _In_ const std::nullptr_t
 ) noexcept
 { }
 
-[[nodiscard]] CWindow::CWindow(
+[[nodiscard]]
+CWindow::CWindow(
 	_In_ const HWND hwWindow
 ) noexcept
 	:
@@ -192,6 +194,7 @@ bool CWindow::restoreOriginalTitle( void ) noexcept {
 }
 
 [[nodiscard]]
+_Ret_maybenull_z_
 const TCHAR* const& CWindow::getOriginalWindowTitle( void ) const noexcept {
 	return this->m_tcstrOriginalWindowTitle;
 }

@@ -140,15 +140,22 @@ LRESULT CALLBACK CMenu::hk_WndProc(
 ) noexcept
 {
     if (msg == WM_KEYDOWN) {
-        if (wParam == VK_INSERT) {
+        switch (wParam) {
+        case VK_INSERT:
             CMenu::_bOpen ^= true;
-        }
-        else if (wParam == VK_ESCAPE) {
+            break;
+        case VK_ESCAPE:
             if (CMenu::_bOpen) {
                 CMenu::_bOpen = false;
                 return TRUE;
             }
             CMenu::_bOpen = false;
+            break;
+        case VK_END:
+            globals::dll::bUnload = true;
+            break;
+        default:
+            break;
         }
     }
 
@@ -193,11 +200,11 @@ void CMenu::drawMain( void ) noexcept {
     ImGui::SliderFloat("Aimbot FOV", &modules::combat::aimbot::fFOV, 5.f, 360.f);
     ImGui::Checkbox("Ignore FOV", &modules::combat::aimbot::bIgnoreFOV);
     ImGui::Checkbox("Draw FOV", &modules::combat::aimbot::bDrawFOV);
-    ImGui::SliderFloat("Aimbot speed", &modules::combat::aimbot::fSpeed, 0.0f, 1.f);
     ImGui::Checkbox("Snaplines", &modules::visuals::snaplines::bToggle);
     ImGui::SliderFloat("Snaplines distance", &modules::visuals::snaplines::fDistance, modules::visuals::snaplines::MIN_DISTANCE, modules::visuals::snaplines::MAX_DISTANCE);
     ImGui::Checkbox("ESP", &modules::visuals::ESP::bToggle);
     ImGui::SliderFloat("ESP distance", &modules::visuals::ESP::fDistance, modules::visuals::ESP::MIN_DISTANCE, modules::visuals::ESP::MAX_DISTANCE);
+    ImGui::SliderFloat("Damage multiplicator", &globals::fDamageMultiplicator, 0.f, 5.f);
 
     ImGui::End();
 }

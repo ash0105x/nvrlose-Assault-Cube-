@@ -20,7 +20,7 @@ export typedef enum class _WEAPON_ID : std::uint8_t {
 
 // Created with ReClass.NET 1.2 by KN4CK3R
 
-export class weapon final{
+export class weapon final {
 public:
 	gun* const vpVTable = nullptr; //0x0000
 	WEAPON_ID uUniqueID = static_cast<const WEAPON_ID>(NULL); //0x0004
@@ -36,3 +36,18 @@ public:
 	std::uint32_t uReloadTime = NULL; //0x0020
 }; //Size: 0x0024
 static_assert(sizeof(weapon) == 0x24u);
+
+// Created with ReClass.NET 1.2 by KN4CK3R
+
+export struct initialWeaponData final {
+	const char cstrName[8]; //0x0000
+private:
+	char pad_0008[258]; //0x0008
+public:
+	std::uint16_t uFirerate; //0x010A
+private:
+	char pad_010C[12]; //0x010C
+public:
+	std::uint8_t uAmmo; //0x0118
+}; //Size: 0x0119
+static_assert(sizeof(initialWeaponData) == 0x11A);

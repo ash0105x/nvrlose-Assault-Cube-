@@ -27,9 +27,6 @@
     <ClCompile Include="src\core\AssaultCube\playerent.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\offsets.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\core\CTrampolineHook32.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -139,9 +136,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\modules\visuals\snaplines.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\core\AssaultCube\initialWeaponData.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\hooks.ixx">

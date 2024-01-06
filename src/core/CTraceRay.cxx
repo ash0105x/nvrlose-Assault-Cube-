@@ -73,33 +73,33 @@ void CTraceRay::traceLine(
 	}
 }
 
-[[nodiscard]] CROSSHAIR_ID CTraceRay::intersect(
-	/*playerent& refPlayer@<eax>,
-	CVector3 vec3Delta@<ebx>*/
-	_In_ const playerent& refPlayer,
-	_In_ const CVector3& vec3PositionFrom,
-	_In_ const CVector3& vec3PositionTo
-) noexcept
-{
-	const CVector3 vec3PreviousCoordinates = *globals::screen::pvec3CurrentWeaponEndTrajectory;
-
-	*globals::screen::pvec3CurrentWeaponEndTrajectory = refPlayer.vec3EyePosition;
-
-	__asm {
-		mov eax, dword ptr[refPlayer]
-
-		mov ecx, dword ptr[vec3PositionTo]
-		mov edx, dword ptr[vec3PositionFrom]
-
-		push ecx
-		push edx
-
-		xor ebx, ebx
-
-		call dword ptr[CTraceRay::_pIntersectFn]
-
-		add esp, 0x08u
-	}
-
-	*globals::screen::pvec3CurrentWeaponEndTrajectory = vec3PreviousCoordinates;
-}
+//[[nodiscard]] CROSSHAIR_ID CTraceRay::intersect(
+//	/*playerent& refPlayer@<eax>,
+//	CVector3 vec3Delta@<ebx>*/
+//	_In_ const playerent& refPlayer,
+//	_In_ const CVector3& vec3PositionFrom,
+//	_In_ const CVector3& vec3PositionTo
+//) noexcept
+//{
+//	const CVector3 vec3PreviousCoordinates = *globals::screen::pVec3CurrentWeaponEndTrajectory;
+//
+//	*globals::screen::pVec3CurrentWeaponEndTrajectory = refPlayer.vec3EyePosition;
+//
+//	__asm {
+//		mov eax, dword ptr[refPlayer]
+//
+//		mov ecx, dword ptr[vec3PositionTo]
+//		mov edx, dword ptr[vec3PositionFrom]
+//
+//		push ecx
+//		push edx
+//
+//		xor ebx, ebx
+//
+//		call dword ptr[CTraceRay::_pIntersectFn]
+//
+//		add esp, 0x08u
+//	}
+//
+//	*globals::screen::pVec3CurrentWeaponEndTrajectory = vec3PreviousCoordinates;
+//}

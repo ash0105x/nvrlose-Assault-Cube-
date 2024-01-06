@@ -5,7 +5,6 @@ import playerent;
 import utils;
 import gl;
 import CFont;
-import initialWeaponData;
 
 import<cstdint>;
 
@@ -47,6 +46,7 @@ void modules::visuals::ESP::onToggle(
     constexpr const float OUT_LINE_WIDTH = 1.f;
 
     constexpr const GLubyte ARR_WHITE[4] = { 255, 255, 255, 255 };
+    constexpr const GLubyte ARR_BLUE[4] = { NULL, NULL, 255, 255 };
     constexpr const GLubyte OUTLINE_COLOR[3u] = { NULL, NULL, NULL };
     constexpr const GLubyte BACKGROUND_COLOR[3] = { 128u, 128u, 128u };
 
@@ -149,25 +149,6 @@ void modules::visuals::ESP::onToggle(
         );
     }
 
-    const float fHealthBarPositionX = xPosition - fPadding - 3.f;
-    const float fHealthBarEndPositionY = vec2TargetOriginScreenPosition.y - ((vec2TargetOriginScreenPosition.y - yPosition) * (static_cast<const float>(refTarget.iHealth) / 100.f));
-
-    char cstrHealthBuffer[10] = { };
-
-    _itoa_s(refTarget.iHealth, cstrHealthBuffer, 10);
-
-    const size_t healthStringLength = strlen(cstrHealthBuffer);
-
-    font.draw(
-        CVector2{
-            fHealthBarPositionX - ((static_cast<const float>(healthStringLength) * fFontHeight) / 2.f),
-            fHealthBarEndPositionY
-        },
-        ARR_WHITE,
-        cstrHealthBuffer,
-        healthStringLength
-    );
-
     glLineWidth(0.1f);
     glColor4ub(
         arrColor[NULL],
@@ -199,52 +180,101 @@ void modules::visuals::ESP::onToggle(
     );
 
     glEnd();
-    
-    const GLubyte playerHealthColorValue = static_cast<const GLubyte>(static_cast<const float>(refTarget.iHealth) * 2.25f);
 
-    const GLubyte playerHealthColor[4] = {
-        255u - playerHealthColorValue,
-        playerHealthColorValue,
-        NULL,
-        255u
+    const auto drawInfoBar = [
+        &vec2TargetOriginScreenPosition,
+        &yPosition,
+        &font,
+        &ARR_WHITE,
+        &ARR_BLUE,
+        &fFontHeight,
+        &BACKGROUND_COLOR,
+        &OUTLINE_COLOR
+    ]
+    (
+        _In_ const float fBarPositionX,
+        _In_range_(NULL, 100) const std::int32_t iInfo,
+        _In_ bool bAdjustColor
+    ) noexcept -> void
+    {
+        const float fBarEndPositionY = (
+            vec2TargetOriginScreenPosition.y - (
+                (vec2TargetOriginScreenPosition.y - yPosition) *
+                (static_cast<const float>(iInfo) / 100.f)
+            )
+        );
+
+        char cstrTextBuffer[10] = { };
+
+        _itoa_s(iInfo, cstrTextBuffer, 10);
+
+        const size_t textStringLength = strlen(cstrTextBuffer);
+
+        font.draw(
+            CVector2{
+                fBarPositionX - ((static_cast<const float>(textStringLength) * fFontHeight) / 2.f),
+                fBarEndPositionY
+            },
+            ARR_WHITE,
+            cstrTextBuffer,
+            textStringLength
+        );
+
+        const GLubyte* arrColor = ARR_BLUE;
+
+        if (bAdjustColor) {
+            const GLubyte playerHealthColorValue = static_cast<const GLubyte>(static_cast<const float>(iInfo) * 2.25f);
+
+            const GLubyte playerHealthColor[4] = {
+                255u - playerHealthColorValue,
+                playerHealthColorValue,
+                NULL,
+                255u
+            };
+
+            arrColor = playerHealthColor;
+        }
+    
+        gl::drawLineRGBA(
+            CVector2{
+                fBarPositionX,
+                vec2TargetOriginScreenPosition.y
+            },
+            CVector2{
+                fBarPositionX,
+                fBarEndPositionY
+            },
+            reinterpret_cast<const GLubyte(&)[4]>(arrColor),
+            BAR_LINE_WIDTH
+        );
+
+        gl::drawLineRGB(
+            CVector2{
+                fBarPositionX,
+                static_cast<const GLfloat>(yPosition),
+            },
+            CVector2{
+                fBarPositionX,
+                vec2TargetOriginScreenPosition.y
+            },
+            BACKGROUND_COLOR,
+            BAR_LINE_WIDTH
+        );
+
+        gl::drawLineRGB(
+            CVector2{
+                fBarPositionX,
+                yPosition + OUT_LINE_WIDTH / 2
+            },
+            CVector2{
+                fBarPositionX,
+                vec2TargetOriginScreenPosition.y - OUT_LINE_WIDTH / 2
+            },
+            OUTLINE_COLOR,
+            BAR_LINE_WIDTH + OUT_LINE_WIDTH
+        );
     };
-    
-    gl::drawLineRGBA(
-        CVector2{
-            fHealthBarPositionX,
-            vec2TargetOriginScreenPosition.y
-        },
-        CVector2{
-            fHealthBarPositionX,
-            fHealthBarEndPositionY
-        },
-        playerHealthColor,
-        BAR_LINE_WIDTH
-    );
 
-    gl::drawLineRGB(
-        CVector2{
-            fHealthBarPositionX,
-            static_cast<const GLfloat>(yPosition),
-        },
-        CVector2{
-            fHealthBarPositionX,
-            vec2TargetOriginScreenPosition.y
-        },
-        BACKGROUND_COLOR,
-        BAR_LINE_WIDTH
-    );
-
-    gl::drawLineRGB(
-        CVector2{
-            fHealthBarPositionX,
-            yPosition + OUT_LINE_WIDTH / 2
-        },
-        CVector2{
-            fHealthBarPositionX,
-            vec2TargetOriginScreenPosition.y - OUT_LINE_WIDTH / 2
-        },
-        OUTLINE_COLOR,
-        BAR_LINE_WIDTH + OUT_LINE_WIDTH
-    );
+    drawInfoBar(xPosition - fPadding - 3.f, refTarget.iHealth, true);
+    drawInfoBar(xPositionRight + fPadding + 3.f, refTarget.iArmor, false);
 }

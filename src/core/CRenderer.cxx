@@ -13,7 +13,6 @@ import playerent;
 import CTraceRay;
 import CVector2;
 import CVector3;
-import offsets;
 
 import<array>;
 
@@ -87,6 +86,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     }();
 
     if (!bInitOnce) {
+        globals::dll::bUnload = true;
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
 
@@ -98,14 +98,34 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     constexpr const GLubyte ARR_WHITE[4u] = { 255, 255, 255, 255 };
 
+    CVector2 vec2TopLeftCorner = CVector2{
+         0.f,
+         static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT)
+    };
+
     arial.drawf(
-        CVector2{
-            0.f,
-            static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT] - ARIAL_FONT_HEIGHT)
-        },
+        vec2TopLeftCorner,
         ARR_WHITE,
         "Thread Id: %d (0x%xl)",
         globals::thread::dwId, globals::thread::dwId
+    );
+
+    /*vec2TopLeftCorner.y -= ARIAL_FONT_HEIGHT;
+
+    arial.drawf(
+        vec2TopLeftCorner,
+        ARR_WHITE,
+        "FPS: %f",
+        *globals::screen::fpFPS
+    );*/
+
+    vec2TopLeftCorner.y -= ARIAL_FONT_HEIGHT;
+
+    arial.drawf(
+        vec2TopLeftCorner,
+        ARR_WHITE,
+        "Map: %s",
+        reinterpret_cast<char*>(&globals::match::cstrPlayingMap)
     );
 
     if (!CRenderer::_bCanSafelyRender) {
@@ -123,8 +143,6 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
         return (*CRenderer::_p_wglSwapBuffers_gateway)(hDC);
     }
-
-    globals::entity::pEntityList = *reinterpret_cast<const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* const* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::ENTITY_LIST);
 
     const auto renderMenu = []( void ) noexcept -> void {
         gl::restoreOrtho();
@@ -148,7 +166,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT]) / 2.f
     };
 
-    if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTimePoint - globals::lastHitTimer).count() <= 250) {
+    if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTimePoint - globals::indicator::lastHitTimer).count() <= 250) {
         constexpr const float LINE_LENGTH = 7.f;
         constexpr const float MIDDLE_PADDING = 5.f;
         constexpr const float HITMARKER_LINE_WIDTH = 0.5f;
@@ -188,7 +206,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         }
     }
 
-    for (std::size_t i = NULL; i < globals::vecEntitiesHit.size(); ++i) {
+    for (std::size_t i = NULL; i < globals::indicator::vecEntitiesHit.size(); ++i) {
         typedef enum : std::uint8_t {
             ENTITY_HIT_INDEX_NICK_NAME = NULL,
             ENTITY_HIT_INDEX_DAMAGE_GIVEN,
@@ -196,10 +214,10 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             ENTITY_HIT_INDEX_TIME_STAMP
         }ENTITY_HIT_INDEX;
         
-        const std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>& refEntityHit = globals::vecEntitiesHit[i];
+        const std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>& refEntityHit = globals::indicator::vecEntitiesHit[i];
 
         if (std::chrono::duration_cast<std::chrono::seconds>(currentTimePoint - std::get<ENTITY_HIT_INDEX::ENTITY_HIT_INDEX_TIME_STAMP>(refEntityHit)).count() >= 5) {
-            globals::vecEntitiesHit.erase(globals::vecEntitiesHit.begin() + i);
+            globals::indicator::vecEntitiesHit.erase(globals::indicator::vecEntitiesHit.begin() + i);
             continue;
         }
 
@@ -219,12 +237,14 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         );
     }
 
-    float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
+    constexpr const float FLOAT_MAX_VALUE = std::numeric_limits<const float>::max();
+
+    float fPlayerDistanceToLocalPlayer = FLOAT_MAX_VALUE;
+    float fAimbotFOV = FLOAT_MAX_VALUE;
     CVector3 vec3Delta = CVector3{ };
-    float fAimbotFOV = std::numeric_limits<float>::max();
 
     for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
-        const playerent& refCurrentPlayer = *((*globals::entity::pEntityList)[i]);
+        const playerent& refCurrentPlayer = *((**globals::entity::ppEntityList)[i]);
 
         if (refCurrentPlayer.iHealth <= NULL) {
             continue;
@@ -314,6 +334,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
             fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
             vec3Delta = vec3CurrentPlayerDelta;
+            fAimbotFOV = 0.f;
 
             continue;
         }
@@ -333,28 +354,19 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         vec3Delta = vec3CurrentPlayerDelta;
     }
 
-    if (modules::combat::aimbot::bIgnoreFOV) {
-        if (std::numeric_limits<float>::max() != fPlayerDistanceToLocalPlayer) {
-            globals::entity::pLocalPlayer->vec2ViewAngles = CVector2{
+    if (fAimbotFOV != FLOAT_MAX_VALUE) {
+        globals::entity::pLocalPlayer->vec2ViewAngles = (
+            CVector2{
                 // opp. / adj.
                 atan2f(vec3Delta.y, vec3Delta.x) * CVector3::fDegreesRadiansConversionValue + 90.f,
                 // opp. / hyp.
-                asinf(vec3Delta.z / fPlayerDistanceToLocalPlayer) * CVector3::fDegreesRadiansConversionValue
-            }.scale(modules::combat::aimbot::fSpeed);
-        }
-    }
-    else if (std::numeric_limits<float>::max() != fAimbotFOV) {
-        globals::entity::pLocalPlayer->vec2ViewAngles = CVector2{
-            // opp. / adj.
-            atan2f(vec3Delta.y, vec3Delta.x) * CVector3::fDegreesRadiansConversionValue + 90.f,
-            // opp. / hyp.
-            asinf(vec3Delta.z / vec3Delta.length()) * CVector3::fDegreesRadiansConversionValue
-        };
+                asinf(vec3Delta.z / (FLOAT_MAX_VALUE == fPlayerDistanceToLocalPlayer ? vec3Delta.length() : fPlayerDistanceToLocalPlayer)) * CVector3::fDegreesRadiansConversionValue
+            }
+        );
     }
 
     if (modules::combat::aimbot::bToggle && modules::combat::aimbot::bDrawFOV && !modules::combat::aimbot::bIgnoreFOV) {
         constexpr const GLubyte ARR_RED[4u] = { 255, NULL, NULL, 255 };
-
 
         gl::drawCircle(
             vec2MiddleScreen,

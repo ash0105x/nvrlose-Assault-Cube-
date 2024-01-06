@@ -5,6 +5,9 @@ import CVector2;
 import<sal.h>;
 import<compare>;
 
+export class CVector3;
+export typedef CVector3 vertex3d_t;
+
 export class CVector3 final {
 public:
 	[[nodiscard]] constexpr CVector3(

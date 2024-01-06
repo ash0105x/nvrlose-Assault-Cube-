@@ -7,7 +7,6 @@ import<string>;
 import globals;
 import weapon;
 import playerent;
-import initialWeaponData;
 import CDetour32;
 import CMidHook32;
 
@@ -24,6 +23,8 @@ namespace jumpBackAddress {
     const void* vpUnknownOpcode = nullptr;
 }
 
+constexpr const float ONE_HALTH = 0.5f;
+
 namespace functions {
     static void __declspec(naked) hkHealthDecreaseOpcode( void ) noexcept {
         __asm {
@@ -32,24 +33,30 @@ namespace functions {
         }
 
         // ebx is the defender, but 0xF4 bytes ahead from the playerent base
+        // edi is the damage
+        // eax holds the damage value after certain modifications
 
 #ifdef _DEBUG
         __asm {
+            // Setting al to the localPlayer's player ID
             mov al, byte ptr[eax + 0x01E4u]
 
+            // Comparing the defender's player ID with our's
             cmp byte ptr[ebx + 0x01E4u - 0xF4u], al
-            jne short notLocalPlayer
+            // Jump if the defender is not the localPlayer
+            jne short onEnemy
+
+            // Will be executed if the defender is the localPlayer
+
+            // Setting the damage taken value to zero.
             xor eax, eax
-            jmp dword ptr[jumpBackAddress::vpHealthOpcode]
-            notLocalPlayer:
-            sub dword ptr[ebx + 0x4u], edi
-            mov eax, edi
+            // Continue original game code execution to prevent crashes
             jmp dword ptr[jumpBackAddress::vpHealthOpcode]
         }
 #endif // _DEBUG
 
         __asm {
-            // Setting al to the localPlayer's teamID (std::uint8_t)
+            // Setting al to the localPlayer's teamID (type std::uint8_t)
             mov al, byte ptr[eax + 0x032Cu]
             // Comparing the defender's teamID with our's
             cmp byte ptr[ebx + 0x032Cu - 0xF4u], al
@@ -62,12 +69,23 @@ namespace functions {
             xor eax, eax
             // Continue original game code execution to prevent crashes
             jmp dword ptr[jumpBackAddress::vpHealthOpcode]
-            onEnemy:
+        }
+
+        __asm {
+        onEnemy:
             // Will be executed if the defender is an enemy
-            // Setting eax to the current defender's health. eax holds the damage taken value
-            mov eax, dword ptr[ebx + 0x4u]
-            // Setting the defender's health to zero
-            mov dword ptr[ebx + 0x4u], NULL
+
+            // Convert the damage to a float and store its result in xmm0
+            cvtsi2ss xmm0, edi
+            // Multiply the damage with our damage multiplicator
+            mulss xmm0, dword ptr[globals::fDamageMultiplicator]
+            // Add 0.5 to floor
+            addss xmm0, dword ptr[ONE_HALTH]
+            // Convert the result of the multiplications to an int and store its result in eax
+            cvttss2si eax, xmm0
+
+            // Subtract the defenders health with eax
+            sub dword ptr[ebx + 0x4u], eax
             // Continue original game code execution to prevent crashes
             jmp dword ptr[jumpBackAddress::vpHealthOpcode]
         }
@@ -94,7 +112,7 @@ namespace functions {
     }
 
     static void __cdecl resetLastHitTimer( void ) noexcept {
-        globals::lastHitTimer = std::chrono::steady_clock::now();
+        globals::indicator::lastHitTimer = std::chrono::steady_clock::now();
     }
 
     static void __cdecl setValues(
@@ -103,7 +121,7 @@ namespace functions {
         const std::int32_t iHealthRemaining
     ) noexcept
     {
-        globals::vecEntitiesHit.emplace_back(
+        globals::indicator::vecEntitiesHit.emplace_back(
             std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point> {
                 std::string{ cstrNickname },
                 uDamageGiven,

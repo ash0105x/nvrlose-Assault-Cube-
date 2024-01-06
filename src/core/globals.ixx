@@ -7,10 +7,7 @@ export module globals;
 import<cstdint>;
 import<array>;
 
-import offsets;
-
 export class playerent;
-export class CWindow;
 export class CVector3;
 
 export typedef enum : std::uint8_t {
@@ -32,7 +29,7 @@ export namespace globals {
 	namespace entity {
 		playerent* pLocalPlayer = nullptr;
 		constexpr const std::uint8_t MAX_ENTITIES = 32u;
-		const std::array<const playerent* const, globals::entity::MAX_ENTITIES>* pEntityList = nullptr;
+		std::array<const playerent* const, globals::entity::MAX_ENTITIES>** ppEntityList = nullptr;
 		constexpr const std::uint8_t FIRST_ENTITY_INDEX = 1u;
 	}
 
@@ -45,18 +42,28 @@ export namespace globals {
 
 	namespace screen {
 		std::array<std::int32_t, 4> viewPort = std::array<std::int32_t, 4>{  };
-		const std::array<const float, 4 * 4>* const pfArrModelViewProjectionMatrix = reinterpret_cast<const std::array<const float, 4 * 4>* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::MODEL_VIEW_PROJECTION_MATRIX);
-		CVector3* const pvec3CurrentWeaponEndTrajectory = reinterpret_cast<CVector3* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::VEC3_CURRENT_WEAPON_END_TRAJECTORY);
+		std::array<const float, 4 * 4>* pfArrModelViewProjectionMatrix = nullptr;
+		CVector3* pVec3CurrentWeaponEndTrajectory = nullptr; // 0x10A400
+		float* fpFPS = nullptr;
+	}
+
+	namespace indicator {
+		std::vector<std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>> vecEntitiesHit = std::vector<std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>>{ };
+		std::chrono::steady_clock::time_point lastHitTimer = std::chrono::steady_clock::time_point{  };
 	}
 
 	namespace match {
-		const std::uint8_t* const bypPlayerInGame = reinterpret_cast<const std::uint8_t* const>(globals::modules::ac_client_exe.asBytePtr + offsets::ac_client_exe::pointer::I_CURRENT_PLAYER_IN_GAME);
+		char* cstrPlayingMap = nullptr;
+		std::uint8_t* bypPlayerInGame = nullptr;
 	}
 
 	namespace thread {
 		DWORD dwId = NULL;
 	}
 
-	std::vector<std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>> vecEntitiesHit = std::vector<std::tuple<std::string, std::uint32_t, std::int32_t, std::chrono::steady_clock::time_point>>{ };
-	std::chrono::steady_clock::time_point lastHitTimer = std::chrono::steady_clock::time_point{  };
+	namespace dll {
+		bool bUnload = false;
+	}
+
+	float fDamageMultiplicator = 1.f;
 }

@@ -62,6 +62,7 @@ public:
 	bool restoreOriginalTitle( void ) noexcept;
 
 	[[nodiscard]]
+	_Ret_maybenull_z_
 	const TCHAR* const& getOriginalWindowTitle( void ) const noexcept;
 public:
 	[[nodiscard]]

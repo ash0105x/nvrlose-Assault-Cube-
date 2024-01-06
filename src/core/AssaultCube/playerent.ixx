@@ -1,6 +1,7 @@
 export module playerent;
 
 import<cstdint>;
+import<array>;
 
 import CTraceRay;
 import CVector2;
@@ -17,6 +18,25 @@ export typedef enum class _SIDE_STATE : std::uint8_t {
 	SIDE_STATE_LEFT = 0x1u,
 	SIDE_STATE_RIGHT = 0xFFu
 }SIDE_STATE;
+
+export typedef enum class _WEAPON_DATA : std::uint32_t {
+	WEAPON_DATA_SECONDARY,
+	WEAPON_DATA_CARBINE,
+	WEAPON_DATA_SHOTGUN,
+	WEAPON_DATA_SUBMACHINE_GUN,
+	WEAPON_DATA_SNIPERRIFLE,
+	WEAPON_DATA_ASSAULT_RIFLE
+}WEAPON_DATA;
+
+export typedef enum class _WEAPON_DATA_EX : std::uint32_t {
+	WEAPON_DATA_EX_KNIFE,
+	WEAPON_DATA_EX_SECONDARY,
+	WEAPON_DATA_EX_CARBINE,
+	WEAPON_DATA_EX_SHOTGUN,
+	WEAPON_DATA_EX_SUBMACHINE_GUN,
+	WEAPON_DATA_EX_SNIPERRIFLE,
+	WEAPON_DATA_EX_ASSAULT_RIFLE
+}WEAPON_DATA_EX;
 
 export typedef enum class _RVSF_PLAYER_SKIN : std::uint8_t {
 	RVSF_PLAYER_SKIN_ALPHA = 0x0,
@@ -125,21 +145,11 @@ public:
 private:
 	const char pad_0105[15]; //0x0105
 public:
-	std::uint32_t uSecondaryWeaponChamber; //0x0114
-	std::uint32_t uCarbineChamber; //0x0118
-	std::uint32_t uShotgunChamber; //0x011C
-	std::uint32_t uSubmachineGunChamber; //0x0120
-	std::uint32_t uSniperChamber; //0x0124
-	std::uint32_t uAssaultRifleChamber; //0x0128
+	std::array<WEAPON_DATA, 6> uArrReservedAmmo; //0x0114
 private:
 	const char pad_012C[16]; //0x012C
 public:
-	std::uint32_t uSecondaryWeaponAmmo; //0x013C
-	std::uint32_t uCarbineAmmo; //0x0140
-	std::uint32_t uShotgunAmmo; //0x0144
-	std::uint32_t uSubmachineGunAmmo; //0x0148
-	std::uint32_t uSniperAmmo; //0x014C
-	std::uint32_t uAssaultRifleAmmo; //0x0150
+	std::array<WEAPON_DATA, 6> uArrAmmo; //0x013C
 private:
 	const char pad_0154[4]; //0x0154
 public:
@@ -147,13 +157,7 @@ public:
 private:
 	const char pad_015C[4]; //0x015C
 public:
-	std::uint32_t uKnifeDelay; //0x0160
-	std::uint32_t uSecondaryWeaponDelay; //0x0164
-	std::uint32_t uCarbineDelay; //0x0168
-	std::uint32_t uShotgunDelay; //0x016C
-	std::uint32_t uSubmachineGunDelay; //0x0170
-	std::uint32_t uSniperDelay; //0x0174
-	std::uint32_t uAssaultRifleDelay; //0x0178
+	std::array<WEAPON_DATA_EX, 7> uArrDelay; //0x0160
 private:
 	const char pad_017C[4]; //0x017C
 public:
@@ -161,13 +165,7 @@ public:
 private:
 	const char pad_0184[4]; //0x0184
 public:
-	std::uint32_t uKnifeUsedInCurrentMatch; //0x0188
-	std::uint32_t uSecondaryWeaponShotsFiredInCurrentMatch; //0x018C
-	std::uint32_t uCarbineShotsFiredInCurrentMatch; //0x0190
-	std::uint32_t uShotgunShotsFiredInCurrentMatch; //0x0194
-	std::uint32_t uSubmachineGunShotsFiredInCurrentMatch; //0x0198
-	std::uint32_t uSniperShotsFiredInCurrentMatch; //0x019C
-	std::uint32_t uAssaultRifleShotsFiredInCurrentMatch; //0x01A0
+	std::array<WEAPON_DATA_EX, 7> uArrFiredCountInCurrentMatch; //0x0188
 private:
 	const char pad_01A4[4]; //0x01A4
 public:
@@ -216,17 +214,17 @@ private:
 	const void* const N0000016B; //0x0344
 	const char pad_0348[40]; //0x0348
 public:
-	weapon* pPreviousWeapon; //0x0370
-	weapon* pCurrentWeapon2; //0x0374 // The same as playerent::pCurrentWeapon
-	weapon* pCurrentWeapon; //0x0378
-	weapon* pConfirmedSelectedWeapon; //0x037C
-	weapon* pSelectedWeapon; //0x0380
-	weapon* pLastShotFiredWeapon; //0x0384
-private:
-	const char pad_0388[148]; //0x0388
-	const void* const N000001A1; //0x041C
-	const char pad_0424[4]; //0x0424
-	const playerent* const N000001A4; //0x0428
-	const char pad_042C[1548]; //0x042C
+	weapon* const pPreviousWeapon; //0x0370
+	weapon* const pCurrentWeapon2; //0x0374 // The same as playerent::pCurrentWeapon but is updated less frequently
+	weapon* const pCurrentWeapon; //0x0378
+	weapon* const pConfirmedSelectedWeapon; //0x037C
+	weapon* const pSelectedWeapon; //0x0380
+	weapon* const pLastShotFiredWeapon; //0x0384
+//private:
+//	const char pad_0388[148]; //0x0388
+//	const void* const N000001A1; //0x041C
+//	const char pad_0424[4]; //0x0424
+//	const playerent* const N000001A4; //0x0428
+//	const char pad_042C[1548]; //0x042C
 }; //Size: 0x0A38
 //static_assert(sizeof(playerent) == 0xA38);

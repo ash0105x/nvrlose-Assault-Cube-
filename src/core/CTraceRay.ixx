@@ -31,13 +31,13 @@ public:
 		_In_ const CVector3& vec3PositionFrom,
 		_In_ const CVector3& vec3PositionTo
 	) noexcept;
-	[[nodiscard]] static CROSSHAIR_ID intersect(
-		/*playerent& refPlayer@<eax>,
-		CVector3 vec3Delta@<ebx>*/
-		_In_ const playerent& refPlayer,
-		_In_ const CVector3& vec3PositionFrom,
-		_In_ const CVector3& vec3PositionTo
-	) noexcept;
+	//[[nodiscard]] static CROSSHAIR_ID intersect(
+	//	/*playerent& refPlayer@<eax>,
+	//	CVector3 vec3Delta@<ebx>*/
+	//	_In_ const playerent& refPlayer,
+	//	_In_ const CVector3& vec3PositionFrom,
+	//	_In_ const CVector3& vec3PositionTo
+	//) noexcept;
 public:
 	/*
 	* CTraceRay traceResult is passed via register eax

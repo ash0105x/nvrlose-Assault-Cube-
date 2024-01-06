@@ -8,12 +8,14 @@ import<cassert>;
 
 import utils;
 
-[[nodiscard]] CDetour32::CDetour32(
+[[nodiscard]]
+CDetour32::CDetour32(
 	[[maybe_unused]] _In_ std::nullptr_t
 ) noexcept
 { }
 
-[[nodiscard]] CDetour32::CDetour32(
+[[nodiscard]]
+CDetour32::CDetour32(
 	_In_ void* const vpHookAddress,
 	_In_ const size_t hookLength
 ) noexcept

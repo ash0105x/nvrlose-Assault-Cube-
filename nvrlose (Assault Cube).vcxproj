@@ -172,7 +172,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\core\AssaultCube\weapon.ixx" />
-    <ClCompile Include="src\core\AssaultCube\initialWeaponData.ixx" />
     <ClCompile Include="src\core\CDetour32.cxx" />
     <ClCompile Include="src\core\CDetour32.ixx" />
     <ClCompile Include="src\core\CMenu.cxx" />
@@ -203,7 +202,6 @@
     <ClCompile Include="src\core\modules\visuals\ESP.cxx" />
     <ClCompile Include="src\core\modules\visuals\ESP.ixx" />
     <ClCompile Include="src\core\modules\visuals\snaplines.ixx" />
-    <ClCompile Include="src\core\offsets.ixx" />
     <ClCompile Include="src\core\signatures.ixx" />
     <ClCompile Include="src\core\utils.cxx" />
     <ClCompile Include="src\core\utils.ixx" />
