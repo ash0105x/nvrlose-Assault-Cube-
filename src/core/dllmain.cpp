@@ -61,7 +61,7 @@ namespace exitFunction {
 }
 
 // Main hack thread
-static DWORD CALLBACK MainThread(
+static DWORD WINAPI MainThread(
     _In_ void* const vpInstDLL
 ) noexcept
 {
@@ -85,7 +85,7 @@ static DWORD CALLBACK MainThread(
     }
 
     // if-statement that checks whether the CRenderer instance
-    // successfully instanciated or not.
+    // successfully instanciated.
     if (!globals::pRenderer->ok()) {
         // Uninject the dll, exit out of the function and
         // give the user the information that we weren't able
@@ -335,13 +335,20 @@ BOOL APIENTRY DllMain(
         if (!globals::modules::ac_client_exe.asBytePtr) {
             SetLastError(ERROR_MOD_NOT_FOUND);
 
-            exit(
+            typedef std::basic_string<TCHAR> tstring;
+
+            const tstring tstrErrorMessage = (
+                tstring{ __TEXT("Failed to retrieve module \"ac_client.exe\" because you injected me into \"") } +
+                tstring{ utils::process::name(GetCurrentProcessId()) } +
+                tstring{ __TEXT("\" instead of Assault Cube (ac_client.exe) which is") } +
                 (
-                    __TEXT("Failed to retrieve module \"ac_client.exe\" because you injected me into \"") +
-                    std::basic_string<TCHAR>{ utils::process::name(GetCurrentProcessId()) } +
-                    __TEXT("\" instead of Assault Cube (ac_client.exe)")
-                ).c_str()
+                    utils::process::isRunning(__TEXT("ac_client.exe")) ?
+                    tstring{ __TEXT(" currently running") } :
+                    tstring{ __TEXT("n't even currently running") }
+                )
             );
+
+            exit(tstrErrorMessage.c_str());
         }
 
         const HANDLE hThread = CreateThread(

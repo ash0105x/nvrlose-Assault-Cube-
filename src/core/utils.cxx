@@ -26,7 +26,6 @@ std::uint8_t* const utils::memory::findSignature(
 	const char* const& cstrMask = std::get<SIGNATURE_DATA_INDEX::SIGNATURE_DATA_INDEX_MASK>(signatureData);
 	const std::size_t actualMaskLength = std::strlen(cstrMask);
 
-
 	assert(
 		hModule &&
 		(

@@ -58,7 +58,7 @@ import<array>;
 
 	this->m_wglSwapBuffersTrampolineHook32 = CTrampolineHook32{ CRenderer::_p_wglSwapBuffers_gateway, WGL_SWAP_BUFFERS_HOOK_LENGTH };
 
-    CRenderer::_p_wglSwapBuffers_gateway = reinterpret_cast<const CRenderer::_wglSwapBuffers_t>(this->m_wglSwapBuffersTrampolineHook32.attach(&CRenderer::hk_wglSwapBuffers));
+    CRenderer::_p_wglSwapBuffers_gateway = static_cast<const CRenderer::_wglSwapBuffers_t>(this->m_wglSwapBuffersTrampolineHook32.attach(&CRenderer::hk_wglSwapBuffers));
 
     this->m_bOk = CRenderer::_p_wglSwapBuffers_gateway;
 }
@@ -368,7 +368,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     }
 
     if (modules::combat::aimbot::bToggle && modules::combat::aimbot::bDrawFOV && !modules::combat::aimbot::bIgnoreFOV) {
-        constexpr const GLubyte ARR_RED[4u] = { 255, NULL, NULL, 255 };
+        constexpr const GLubyte ARR_RED[4u] = { 0xFF, 0x0, 0x0, 0xFF };
 
         gl::drawCircle(
             vec2MiddleScreen,

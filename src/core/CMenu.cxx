@@ -21,7 +21,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 [[nodiscard]]
 CMenu::CMenu(
-    _In_z_ const char* const cstrName
+    _In_z_ const char* const cstrClientName
 ) noexcept
 {
     if (
@@ -32,12 +32,9 @@ CMenu::CMenu(
         return;
     }
 
-    CMenu::_AssaultCubeWindow.setTitleA(cstrName);
+    CMenu::_AssaultCubeWindow.setTitleA(cstrClientName);
 
-    if (
-        const HMODULE hSDL = GetModuleHandle(__TEXT("SDL.dll"))
-    )
-    {
+    if (const HMODULE hSDL = GetModuleHandle(__TEXT("SDL.dll"))) {
         this->m_bOk = CMenu::_p_SDL_WM_GrabInput = reinterpret_cast<const CMenu::_SDL_WM_GrabInput_t>(GetProcAddress(hSDL, "SDL_WM_GrabInput"));
     }
 }

@@ -9,7 +9,7 @@ import CWindow;
 export class CMenu final {
 public:
 	[[nodiscard]] explicit CMenu(
-		_In_z_ const char* const cstrName
+		_In_z_ const char* const cstrClientName
 	) noexcept;
 public:
 	~CMenu( void ) noexcept;
