@@ -113,6 +113,24 @@ bool utils::memory::isExecutableRegion(
 	);
 }
 
+void utils::memory::placeJump(
+	_In_ std::uint8_t* const bypAddress,
+	_In_ const std::uint8_t* const bypNewFunction
+) noexcept
+{
+	assert(
+		bypAddress &&
+		utils::memory::isExecutableRegion(bypAddress) &&
+		bypNewFunction &&
+		utils::memory::isExecutableRegion(bypNewFunction)
+	);
+
+	const std::ptrdiff_t ptrRelativeOffset = utils::memory::calculateRelativeOffset(bypAddress, bypNewFunction);
+
+	bypAddress[NULL] = utils::x86asm::JMP;
+	*reinterpret_cast<DWORD* const>(bypAddress + 1u) = ptrRelativeOffset;
+}
+
 [[nodiscard]]
 _Check_return_
 _Success_(return == true)
@@ -143,10 +161,7 @@ bool utils::memory::detour32(
 		return false;
 	}
 
-	const std::ptrdiff_t ptrRelativeOffset = utils::memory::calculateRelativeOffset(bypAddress, bypNewFunction);
-
-	bypAddress[NULL] = utils::x86asm::jmp;
-	*reinterpret_cast<DWORD* const>(bypAddress + 1u) = ptrRelativeOffset;
+	utils::memory::placeJump(bypAddress, bypNewFunction);
 
 	DWORD dwTempProtection = NULL;
 	VirtualProtect(
@@ -173,7 +188,7 @@ std::ptrdiff_t utils::memory::calculateRelativeOffset(
 _Check_return_opt_
 _Success_(return == true)
 bool utils::process::enumerate(
-	_In_ bool(* const& pRefEnumFunction)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept,
+	_In_ const utils::process::enumerateFunction_t& pRefEnumFunction,
 	_In_opt_ void* const vpExtraParameter
 ) noexcept
 {

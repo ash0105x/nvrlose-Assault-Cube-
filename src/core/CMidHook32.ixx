@@ -113,33 +113,27 @@ public:
 			0x0
 		);
 
-		const DWORD dwFunctionCallAdressRelativeOffset = utils::memory::calculateRelativeOffset(
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset] = utils::x86asm::PUSHAD;
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x1] = utils::x86asm::PUSHFD;
+
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x2] = utils::x86asm::CALL;
+		*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + uPrepareFunctionCallOffset + 0x3) = utils::memory::calculateRelativeOffset(
 			this->m_byArrStolenBytes + uPrepareFunctionCallOffset + 0x2,
 			static_cast<const std::uint8_t* const>(vpNewFunction)
 		);
 
-		const std::uint8_t uJumpBackOffset = (
-			MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_DISCARD == midHookOrder ?
-			0x9 :
-			0x9 + this->m_uHookLength
-		);
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x7] = utils::x86asm::POPFD;
+		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x8] = utils::x86asm::POPAD;
 
-		const DWORD dwJumpBackAdressRelativeOffset = utils::memory::calculateRelativeOffset(
-			this->m_byArrStolenBytes + uJumpBackOffset,
+		utils::memory::placeJump(
+			this->m_byArrStolenBytes +
+			(
+				MID_HOOK_ORDER::MID_HOOK_ORDER_STOLEN_BYTES_DISCARD == midHookOrder ?
+				0x9 :
+				0x9 + this->m_uHookLength
+			),
 			static_cast<const std::uint8_t* const>(this->m_vpHookAddress) + this->m_uHookLength
 		);
-
-		this->m_byArrStolenBytes[uPrepareFunctionCallOffset] = utils::x86asm::pushad;
-		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x1] = utils::x86asm::pushfd;
-
-		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x2] = utils::x86asm::call;
-		*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + uPrepareFunctionCallOffset + 0x3) = dwFunctionCallAdressRelativeOffset;
-
-		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x7] = utils::x86asm::popfd;
-		this->m_byArrStolenBytes[uPrepareFunctionCallOffset + 0x8] = utils::x86asm::popad;
-
-		this->m_byArrStolenBytes[uJumpBackOffset] = utils::x86asm::jmp;
-		*reinterpret_cast<DWORD* const>(this->m_byArrStolenBytes + uJumpBackOffset + 0x1) = dwJumpBackAdressRelativeOffset;
 
 		return(
 			utils::memory::detour32(

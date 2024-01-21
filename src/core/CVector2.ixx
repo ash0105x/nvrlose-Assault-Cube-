@@ -4,7 +4,6 @@ import<sal.h>;
 import<compare>;
 
 export class CVector2;
-export typedef CVector2 vertex2d_t;
 
 export class CVector2 final {
 public:

@@ -7,8 +7,6 @@ import<string>;
 import globals;
 import weapon;
 import playerent;
-import CDetour32;
-import CMidHook32;
 
 export class IHook;
 
@@ -172,6 +170,6 @@ namespace functions {
 
 export namespace hooks {
 	std::tuple<IHook*, const void* const, const void*&> healthDecreaseOpcode = std::tuple<IHook*, const void* const, const void*&>{ nullptr, &functions::hkHealthDecreaseOpcode, jumpBackAddress::vpHealthOpcode };
-    std::pair<IHook*, const void* const> shootFunction = std::pair<IHook*, const void* const>{ nullptr, &functions::hkShoot };
+    std::pair<IHook*, const void* const> shootFunction = std::make_pair<IHook*, const void* const>(nullptr, &functions::hkShoot);
     std::tuple<IHook*, const void* const, const void*&> unknownOpcode = std::tuple<IHook*, const void* const, const void*&>{ nullptr, &functions::hkUnknown, jumpBackAddress::vpUnknownOpcode };
 }

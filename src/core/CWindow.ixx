@@ -53,8 +53,8 @@ public:
 public:
 	_Check_return_opt_
 	_Success_(return == true)
-	bool setTitle(
-		_In_z_ const TCHAR* const tcstrTitle
+	bool setTitleA(
+		_In_z_ const char* const cstrTitle
 	) noexcept;
 
 	_Check_return_opt_
@@ -63,7 +63,7 @@ public:
 
 	[[nodiscard]]
 	_Ret_maybenull_z_
-	const TCHAR* const& getOriginalWindowTitle( void ) const noexcept;
+	const char* const& getOriginalWindowTitleA( void ) const noexcept;
 public:
 	[[nodiscard]]
 	_Success_(return != nullptr)
@@ -73,5 +73,5 @@ public:
 private:
 	HWND m_hwWindow = nullptr;
 	WNDPROC m_pOriginalWndProc = nullptr;
-	TCHAR* m_tcstrOriginalWindowTitle = nullptr;
+	char* m_cstrOriginalWindowTitle = nullptr;
 };

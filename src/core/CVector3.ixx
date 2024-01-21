@@ -6,7 +6,6 @@ import<sal.h>;
 import<compare>;
 
 export class CVector3;
-export typedef CVector3 vertex3d_t;
 
 export class CVector3 final {
 public:
@@ -83,7 +82,7 @@ public:
 		_In_ const CVector3&
 	) noexcept;
 public:
-	inline static constexpr const float fDegreesRadiansConversionValue = static_cast<const float>(180.0 / 3.14159265358979323846); // pi;
+	inline static constexpr const float fDegreesRadiansConversionValue = static_cast<const float>(180.0 / 3.14159265358979323846 /*PI*/);
 public:
 	union {
 		struct {

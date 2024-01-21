@@ -46,6 +46,11 @@ export namespace utils {
 			_In_opt_ const void* const vpMemoryRegion
 		) noexcept;
 
+		void placeJump(
+			_In_ std::uint8_t* const bypAddress,
+			_In_ const std::uint8_t* const bypNewFunction
+		) noexcept;
+
 		[[nodiscard]]
 		_Check_return_
 		_Success_(return == true)
@@ -83,10 +88,12 @@ export namespace utils {
 	}
 
 	namespace process {
+		typedef bool(* const& enumerateFunction_t)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept;
+
 		_Check_return_opt_
 		_Success_(return == true)
 		bool enumerate(
-			_In_ bool(* const& pRefEnumFunction)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept,
+			_In_ const utils::process::enumerateFunction_t& pRefEnumFunction,
 			_In_opt_ void* const vpExtraParameter
 		) noexcept;
 
@@ -115,13 +122,13 @@ export namespace utils {
 	}
 
 	namespace x86asm {
-		constexpr const std::uint8_t jmp = 0xE9u;
-		constexpr const std::uint8_t call = 0xE8u;
+		constexpr const std::uint8_t CALL = 0xE8u;
+		constexpr const std::uint8_t JMP = 0xE9u;
 
-		constexpr const std::uint8_t pushad = 0x60u;
-		constexpr const std::uint8_t pushfd = 0x9Cu;
+		constexpr const std::uint8_t PUSHAD = 0x60u;
+		constexpr const std::uint8_t PUSHFD = 0x9Cu;
 
-		constexpr const std::uint8_t popad = 0x61u;
-		constexpr const std::uint8_t popfd = 0x9Du;
+		constexpr const std::uint8_t POPAD = 0x61u;
+		constexpr const std::uint8_t POPFD = 0x9Du;
 	}
 }

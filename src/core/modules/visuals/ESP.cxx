@@ -18,7 +18,7 @@ void modules::visuals::ESP::onToggle(
     const playerent& refTarget,
     const gl::CFont& font,
     const CVector2& vec2TargetOriginScreenPosition,
-    const GLubyte (&arrColor)[4]
+    const GLubyte(&arrColor)[4]
 ) noexcept
 {
     CVector2 vec2TargetEyeScreenPosition = CVector2{ };
@@ -45,10 +45,10 @@ void modules::visuals::ESP::onToggle(
     constexpr const float BAR_LINE_WIDTH = 4.f;
     constexpr const float OUT_LINE_WIDTH = 1.f;
 
-    constexpr const GLubyte ARR_WHITE[4] = { 255, 255, 255, 255 };
-    constexpr const GLubyte ARR_BLUE[4] = { NULL, NULL, 255, 255 };
+    constexpr const GLubyte ARR_WHITE[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
+    constexpr const GLubyte ARR_BLUE[4] = { NULL, NULL, 0xFF, 0xFF };
     constexpr const GLubyte OUTLINE_COLOR[3u] = { NULL, NULL, NULL };
-    constexpr const GLubyte BACKGROUND_COLOR[3] = { 128u, 128u, 128u };
+    constexpr const GLubyte BACKGROUND_COLOR[3] = { 0x80, 0x80, 0x80 };
 
     const char* const& cstrRefTargetNickName = refTarget.cstrNickname;
 
@@ -194,7 +194,7 @@ void modules::visuals::ESP::onToggle(
     (
         _In_ const float fBarPositionX,
         _In_range_(NULL, 100) const std::int32_t iInfo,
-        _In_ bool bAdjustColor
+        _In_ bool bInfoIsHealthValue
     ) noexcept -> void
     {
         const float fBarEndPositionY = (
@@ -220,9 +220,21 @@ void modules::visuals::ESP::onToggle(
             textStringLength
         );
 
-        const GLubyte* arrColor = ARR_BLUE;
-
-        if (bAdjustColor) {
+        if (!bInfoIsHealthValue) {
+            gl::drawLineRGBA(
+                CVector2{
+                    fBarPositionX,
+                    vec2TargetOriginScreenPosition.y
+                },
+                CVector2{
+                    fBarPositionX,
+                    fBarEndPositionY
+                },
+                ARR_BLUE,
+                BAR_LINE_WIDTH
+            );
+        }
+        else {
             const GLubyte playerHealthColorValue = static_cast<const GLubyte>(static_cast<const float>(iInfo) * 2.25f);
 
             const GLubyte playerHealthColor[4] = {
@@ -232,21 +244,19 @@ void modules::visuals::ESP::onToggle(
                 255u
             };
 
-            arrColor = playerHealthColor;
+            gl::drawLineRGBA(
+                CVector2{
+                    fBarPositionX,
+                    vec2TargetOriginScreenPosition.y
+                },
+                CVector2{
+                    fBarPositionX,
+                    fBarEndPositionY
+                },
+                playerHealthColor,
+                BAR_LINE_WIDTH
+            );
         }
-    
-        gl::drawLineRGBA(
-            CVector2{
-                fBarPositionX,
-                vec2TargetOriginScreenPosition.y
-            },
-            CVector2{
-                fBarPositionX,
-                fBarEndPositionY
-            },
-            reinterpret_cast<const GLubyte(&)[4]>(arrColor),
-            BAR_LINE_WIDTH
-        );
 
         gl::drawLineRGB(
             CVector2{

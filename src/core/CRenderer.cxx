@@ -76,13 +76,13 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 ) noexcept
 {
     static const bool bInitOnce = []( void ) noexcept -> bool {
-        const bool bReturnValue = CMenu::initialize();
+        const bool bSucceeded = CMenu::initialize();
 
-        if (!bReturnValue) {
+        if (!bSucceeded) {
             (*globals::function::pPopupMessage)("Failed to initialize renderings");
         }
 
-        return bReturnValue;
+        return bSucceeded;
     }();
 
     if (!bInitOnce) {
@@ -96,7 +96,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     static gl::CFont arial = gl::CFont{ __TEXT("arial"), ARIAL_FONT_HEIGHT, hDC };
 
-    constexpr const GLubyte ARR_WHITE[4u] = { 255, 255, 255, 255 };
+    constexpr const GLubyte ARR_WHITE[4u] = { 0xFF, 0xFF, 0xFF, 0xFF };
 
     CVector2 vec2TopLeftCorner = CVector2{
          0.f,
@@ -106,18 +106,20 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
     arial.drawf(
         vec2TopLeftCorner,
         ARR_WHITE,
-        "Thread Id: %d (0x%xl)",
+        "Thread Id: %d (0x%Xl)",
         globals::thread::dwId, globals::thread::dwId
     );
 
-    /*vec2TopLeftCorner.y -= ARIAL_FONT_HEIGHT;
+    if (globals::screen::fpFPS) {
+        vec2TopLeftCorner.y -= ARIAL_FONT_HEIGHT;
 
-    arial.drawf(
-        vec2TopLeftCorner,
-        ARR_WHITE,
-        "FPS: %f",
-        *globals::screen::fpFPS
-    );*/
+        arial.drawf(
+            vec2TopLeftCorner,
+            ARR_WHITE,
+            "FPS: %f",
+            *globals::screen::fpFPS
+        );
+    }
 
     vec2TopLeftCorner.y -= ARIAL_FONT_HEIGHT;
 
@@ -267,11 +269,11 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         if (modules::visuals::ESP::bToggle || modules::visuals::snaplines::bToggle) {
             CVector2 vec2TargetOriginScreenPosition = CVector2{ };
             if (utils::math::worldToScreen(refCurrentPlayer.vec3Origin, vec2TargetOriginScreenPosition)) {
-                constexpr const GLubyte arrTeamHiddenColor[4u] = { 0xF3, 0x9F, 0x5A, 0xFF };
-                constexpr const GLubyte arrTeamVisibleColor[4u] = { 0xE8, 0xBC, 0xB9, 0xFF };
+                constexpr const GLubyte arrTeamHiddenColor[4u] = { 0x7F, 0xFF, 0xD4, 0xFF };
+                constexpr const GLubyte arrTeamVisibleColor[4u] = { 0x7B, 0x68, 0xEE, 0xFF };
 
-                constexpr const GLubyte arrEnemyHiddenColor[4u] = { 0x45, 0x19, 0x52, 0xFF };
-                constexpr const GLubyte arrEnemyVisibleColor[4u] = { 0xAE, 0x44, 0x5A, 0xFF };
+                constexpr const GLubyte arrEnemyHiddenColor[4u] = { 0xFF, 0xFF, 0x00, 0xFF };
+                constexpr const GLubyte arrEnemyVisibleColor[4u] = { 0xDC, 0x14, 0x3C, 0xFF };
 
                 const GLubyte(&arrColor)[4u] = (
                     refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID ?

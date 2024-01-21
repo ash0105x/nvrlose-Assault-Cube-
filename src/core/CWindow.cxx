@@ -26,10 +26,10 @@ CWindow::CWindow(
 	:
 	m_hwWindow(other.m_hwWindow),
 	m_pOriginalWndProc(other.m_pOriginalWndProc),
-	m_tcstrOriginalWindowTitle(other.m_tcstrOriginalWindowTitle)
+	m_cstrOriginalWindowTitle(other.m_cstrOriginalWindowTitle)
 {
 	other.m_pOriginalWndProc = nullptr;
-	other.m_tcstrOriginalWindowTitle = nullptr;
+	other.m_cstrOriginalWindowTitle = nullptr;
 }
 
 CWindow::~CWindow( void ) noexcept {
@@ -47,10 +47,10 @@ CWindow& CWindow::operator=(
 
 	this->m_hwWindow = other.m_hwWindow;
 	this->m_pOriginalWndProc = other.m_pOriginalWndProc;
-	this->m_tcstrOriginalWindowTitle = other.m_tcstrOriginalWindowTitle;
+	this->m_cstrOriginalWindowTitle = other.m_cstrOriginalWindowTitle;
 
 	other.m_pOriginalWndProc = nullptr;
-	other.m_tcstrOriginalWindowTitle = nullptr;
+	other.m_cstrOriginalWindowTitle = nullptr;
 
 	return *this;
 }
@@ -150,53 +150,53 @@ bool CWindow::getWindowSize(
 
 _Check_return_opt_
 _Success_(return == true)
-bool CWindow::setTitle(
-	_In_z_ const TCHAR* const tcstrTitle
+bool CWindow::setTitleA(
+	_In_z_ const char* const cstrTitle
 ) noexcept
 {
-	assert(tcstrTitle && tcstrTitle[NULL] != __TEXT('\0'));
+	assert(cstrTitle && cstrTitle[NULL] != __TEXT('\0'));
 
-	if (this->m_tcstrOriginalWindowTitle) {
-		return SetWindowText(this->m_hwWindow, tcstrTitle);
+	if (this->m_cstrOriginalWindowTitle) {
+		return SetWindowTextA(this->m_hwWindow, cstrTitle);
 	}
 
-	const std::int32_t iOriginalWindowTitleLength = GetWindowTextLength(this->m_hwWindow) + 1;
+	const std::int32_t iOriginalWindowTitleLength = GetWindowTextLength(this->m_hwWindow);
 
-	if (iOriginalWindowTitleLength <= 1) {
+	if (!iOriginalWindowTitleLength) {
 		return false;
 	}
 
 	try {
-		this->m_tcstrOriginalWindowTitle = new TCHAR[iOriginalWindowTitleLength];
+		this->m_cstrOriginalWindowTitle = new char[iOriginalWindowTitleLength + 1];
 	}
 	catch (const std::bad_alloc&) {
 		return false;
 	}
 
 	return(
-		GetWindowText(this->m_hwWindow, this->m_tcstrOriginalWindowTitle, iOriginalWindowTitleLength) &&
-		SetWindowText(this->m_hwWindow, tcstrTitle)
+		GetWindowTextA(this->m_hwWindow, this->m_cstrOriginalWindowTitle, iOriginalWindowTitleLength) &&
+		SetWindowTextA(this->m_hwWindow, cstrTitle)
 	);
 }
 
 _Check_return_opt_
 _Success_(return == true)
 bool CWindow::restoreOriginalTitle( void ) noexcept {
-	if (!this->m_tcstrOriginalWindowTitle) {
+	if (!this->m_cstrOriginalWindowTitle) {
 		return false;
 	}
 
-	const bool bSuccessfullyRestored = SetWindowText(this->m_hwWindow, this->m_tcstrOriginalWindowTitle);
-	delete[] this->m_tcstrOriginalWindowTitle;
-	this->m_tcstrOriginalWindowTitle = nullptr;
+	const bool bSuccessfullyRestored = SetWindowTextA(this->m_hwWindow, this->m_cstrOriginalWindowTitle);
+	delete[] this->m_cstrOriginalWindowTitle;
+	this->m_cstrOriginalWindowTitle = nullptr;
 
 	return bSuccessfullyRestored;
 }
 
 [[nodiscard]]
 _Ret_maybenull_z_
-const TCHAR* const& CWindow::getOriginalWindowTitle( void ) const noexcept {
-	return this->m_tcstrOriginalWindowTitle;
+const char* const& CWindow::getOriginalWindowTitleA( void ) const noexcept {
+	return this->m_cstrOriginalWindowTitle;
 }
 
 [[nodiscard]]

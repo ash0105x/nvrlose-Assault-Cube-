@@ -9,8 +9,6 @@ import CWindow;
 import<filesystem>;
 
 #include<Windows.h>
-// SHGetKnownFolderPath
-#include<ShlObj_core.h>
 
 #include<gl/GL.h>
 #pragma comment(lib, "opengl32.lib")
@@ -34,73 +32,14 @@ CMenu::CMenu(
         return;
     }
 
-    constexpr const TCHAR* const CLIENT_NAME = (
-        __TEXT("nvrlose client")
-#ifdef _DEBUG
-        __TEXT(" (debug)")
-#endif // _DEBUG
-    );
-
-    CMenu::_AssaultCubeWindow.setTitle(CLIENT_NAME);
+    CMenu::_AssaultCubeWindow.setTitleA(cstrName);
 
     if (
-        const HMODULE hSDL = GetModuleHandle(__TEXT("SDL.dll"));
-        !hSDL ||
-        !(CMenu::_p_SDL_WM_GrabInput = reinterpret_cast<const CMenu::_SDL_WM_GrabInput_t>(GetProcAddress(hSDL, "SDL_WM_GrabInput")))
+        const HMODULE hSDL = GetModuleHandle(__TEXT("SDL.dll"))
     )
     {
-        return;
+        this->m_bOk = CMenu::_p_SDL_WM_GrabInput = reinterpret_cast<const CMenu::_SDL_WM_GrabInput_t>(GetProcAddress(hSDL, "SDL_WM_GrabInput"));
     }
-
-    wchar_t* wcstrAppdataPath = nullptr;
-    
-    if (
-        FAILED(
-            SHGetKnownFolderPath(
-                ::FOLDERID_RoamingAppData,
-                KNOWN_FOLDER_FLAG::KF_FLAG_DEFAULT,
-                nullptr,
-                &wcstrAppdataPath
-            )
-        )
-    )
-    {
-        CoTaskMemFree(wcstrAppdataPath);
-        return;
-    }
-
-    this->m_filePath = std::filesystem::path{ wcstrAppdataPath };
-    this->m_filePath.append(cstrName);
-
-    const auto tryCreatingDirectory = [this](const std::filesystem::path& path) noexcept -> bool {
-        return(
-            (
-                std::filesystem::exists(path) &&
-                std::filesystem::is_directory(path)
-            ) ||
-            std::filesystem::create_directory(this->m_filePath)
-        );
-    };
-
-    if (tryCreatingDirectory(this->m_filePath)) {
-        this->m_bOk = true;
-        CoTaskMemFree(wcstrAppdataPath);
-        return;
-    }
-
-    for (std::uint8_t i = NULL; i < UCHAR_MAX; ++i) {
-        const std::filesystem::path newPathAttempt = this->m_filePath / (L" (" + std::to_wstring(i) + L')');
-
-        if (!tryCreatingDirectory(newPathAttempt)) {
-            continue;
-        }
-
-        this->m_filePath = newPathAttempt;
-        this->m_bOk = true;
-        break;
-    }
-
-    CoTaskMemFree(wcstrAppdataPath);
 }
 
 CMenu::~CMenu( void ) noexcept {
