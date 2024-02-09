@@ -187,11 +187,11 @@ std::ptrdiff_t utils::memory::calculateRelativeOffset(
 _Check_return_opt_
 _Success_(return == true)
 bool utils::process::enumerate(
-	_In_ const utils::process::enumerateFunction_t& pRefEnumFunction,
+	_In_ const utils::process::enumerateFunction_t pEnumFunction,
 	_In_opt_ void* const vpExtraParameter
 ) noexcept
 {
-	assert(pRefEnumFunction);
+	assert(pEnumFunction);
 
 	const HANDLE hProcessSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
 
@@ -214,7 +214,7 @@ bool utils::process::enumerate(
 	}
 
 	do {
-		if (!((*pRefEnumFunction)(processInfo32, vpExtraParameter))) {
+		if (!((*pEnumFunction)(processInfo32, vpExtraParameter))) {
 			break;
 		}
 	} while (Process32Next(hProcessSnapshot, &processInfo32));
@@ -264,38 +264,58 @@ bool utils::process::isRunning(
 
 [[nodiscard]]
 _Check_return_
-_Ret_maybenull_z_
-_Ret_z_
-_Success_(return != nullptr)
-const TCHAR* utils::process::name(
+std::string utils::process::name(
 	_In_ const DWORD dwId
 ) noexcept
 {
 	assert(dwId);
 
-	typedef struct ProcessInformation {
+	class CProcessInformation final {
+	public:
+		[[nodiscard]]
+		explicit CProcessInformation(
+			_In_ const DWORD& dwRefId
+		) noexcept
+			: dwRefId(dwRefId)
+		{
+			this->strName.reserve(MAX_PATH);
+		}
+	public:
 		const DWORD& dwRefId = NULL;
-		const TCHAR* tcstrName = nullptr;
-	}ProcessInformation_t;
+		std::string strName = std::string{ };
+	};
 
-	ProcessInformation_t processInformation = ProcessInformation_t{ dwId };
+	CProcessInformation processInformation = CProcessInformation{ dwId };
 
 	utils::process::enumerate(
 		[](_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept -> bool {
-			ProcessInformation_t& refProcessInformation = *static_cast<ProcessInformation_t* const>(vpExtraParameter);
+			CProcessInformation& refProcessInformation = *static_cast<CProcessInformation* const>(vpExtraParameter);
 
 			if (refProcessInfo32.th32ProcessID != refProcessInformation.dwRefId) {
 				return true;
 			}
 
-			refProcessInformation.tcstrName = refProcessInfo32.szExeFile;
+#ifdef _UNICODE
+			std::size_t numOfCharConverted = NULL;
+			wcstombs_s(
+				&numOfCharConverted,
+				const_cast<char* const>(refProcessInformation.strName.c_str()), MAX_PATH,
+				refProcessInfo32.szExeFile, sizeof(refProcessInfo32.szExeFile) / sizeof(refProcessInfo32.szExeFile[NULL])
+			);
+#else
+			strcpy_s(
+				const_cast<char* const>(refProcessInformation.strName.c_str()),
+				MAX_PATH,
+				refProcessInfo32.szExeFile
+			);
+#endif // _UNICODE
 
 			return false;
 		},
 		&processInformation
 	);
 
-	return processInformation.tcstrName;
+	return processInformation.strName;
 }
 
 bool utils::math::worldToScreen(

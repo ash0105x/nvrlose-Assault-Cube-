@@ -13,11 +13,25 @@ import CVector3;
 
 export class CRenderer final {
 public:
-	[[nodiscard]] explicit CRenderer( 
+	[[nodiscard]]
+	explicit CRenderer( 
 		_In_z_ const char* const cstrName
+	) noexcept;
+	CRenderer(
+		const CRenderer&
+	) = delete;
+	CRenderer(
+		_Inout_ CRenderer&&
 	) noexcept;
 public:
 	~CRenderer( void ) noexcept;
+public:
+	CRenderer& operator=(
+		const CRenderer&
+	) = delete;
+	CRenderer& operator=(
+		CRenderer&&
+	) noexcept;
 public:
 	const bool& ok( void ) const noexcept;
 private:
@@ -31,7 +45,7 @@ private:
 public:
 	static inline bool _bCanSafelyRender = false;
 private:
-	bool m_bOk = false;
 	CMenu m_menu;
 	CTrampolineHook32 m_wglSwapBuffersTrampolineHook32 = CTrampolineHook32{ nullptr };
+	bool m_bOk = false;
 };

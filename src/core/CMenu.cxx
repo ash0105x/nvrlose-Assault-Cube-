@@ -34,9 +34,23 @@ CMenu::CMenu(
 
     CMenu::_AssaultCubeWindow.setTitleA(cstrClientName);
 
-    if (const HMODULE hSDL = GetModuleHandle(__TEXT("SDL.dll"))) {
-        this->m_bOk = CMenu::_p_SDL_WM_GrabInput = reinterpret_cast<const CMenu::_SDL_WM_GrabInput_t>(GetProcAddress(hSDL, "SDL_WM_GrabInput"));
+    if (
+        const module_t SDL_dll = module_t{ GetModuleHandle(__TEXT("SDL.dll")) };
+        SDL_dll.asHandle
+    )
+    {
+        this->m_bOk = CMenu::_p_SDL_WM_GrabInput = reinterpret_cast<const CMenu::_SDL_WM_GrabInput_t>(GetProcAddress(SDL_dll.asHandle, "SDL_WM_GrabInput"));
     }
+}
+
+CMenu::CMenu(
+    _Inout_ CMenu&& _Right
+) noexcept
+    :
+    m_filePath(std::move(_Right.m_filePath)),
+    m_bOk(_Right.m_bOk)
+{
+    _Right.m_bOk = false;
 }
 
 CMenu::~CMenu( void ) noexcept {
@@ -62,6 +76,24 @@ CMenu::~CMenu( void ) noexcept {
     else if (ImGui::GetCurrentContext()) {
         ImGui::DestroyContext();
     }
+
+    this->m_bOk = false;
+}
+
+CMenu& CMenu::operator=(
+    _Inout_ CMenu&& _Right
+) noexcept
+{
+    if (&_Right == this) {
+        return *this;
+    }
+
+    this->m_filePath = std::move(_Right.m_filePath);
+    this->m_bOk = _Right.m_bOk;
+
+    _Right.m_bOk = false;
+
+    return *this;
 }
 
 const bool& CMenu::ok( void ) const noexcept {
@@ -133,6 +165,8 @@ void CMenu::drawMain( void ) noexcept {
     }
 
     ImGui::Checkbox("Aimbot", &modules::combat::aimbot::bToggle);
+    ImGui::Checkbox("Visibility Check", &modules::combat::aimbot::bVisible);
+    ImGui::Checkbox("Silent", &modules::combat::aimbot::bSilent);
     ImGui::SliderFloat("Aimbot FOV", &modules::combat::aimbot::fFOV, 5.f, 360.f);
     ImGui::Checkbox("Ignore FOV", &modules::combat::aimbot::bIgnoreFOV);
     ImGui::Checkbox("Draw FOV", &modules::combat::aimbot::bDrawFOV);

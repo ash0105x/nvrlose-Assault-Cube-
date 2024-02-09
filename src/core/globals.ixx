@@ -1,3 +1,4 @@
+#define WIN32_LEAN_AND_MEAN
 #include<Windows.h>
 #include<chrono>
 #include<tuple>
@@ -6,6 +7,8 @@ export module globals;
 
 import<cstdint>;
 import<array>;
+
+import CVector2;
 
 export class playerent;
 export class CVector3;
@@ -16,6 +19,11 @@ export typedef enum : std::uint8_t {
 	VIEW_PORT_ELEMENT_WIDTH,
 	VIEW_PORT_ELEMENT_HEIGHT = 3u
 }VIEW_PORT_ELEMENT;
+
+export typedef union {
+	std::remove_pointer<HMODULE>::type* const asHandle;
+	std::uint8_t* const asBytePtr;
+}module_t;
 
 export namespace globals {
 	namespace function {
@@ -34,10 +42,7 @@ export namespace globals {
 	}
 
 	namespace modules {
-		union _ac_client_exe {
-			const HMODULE asHandle = GetModuleHandle(__TEXT("ac_client.exe"));
-			std::uint8_t* const asBytePtr;
-		}ac_client_exe;
+		module_t ac_client_exe = module_t{ GetModuleHandle(__TEXT("ac_client.exe")) };
 	}
 
 	namespace screen {
@@ -45,6 +50,7 @@ export namespace globals {
 		std::array<const float, 4 * 4>* pfArrModelViewProjectionMatrix = nullptr;
 		CVector3* pVec3CurrentWeaponEndTrajectory = nullptr; // 0x10A400
 		float* fpFPS = nullptr;
+		CVector2 vec2MiddleScreen = CVector2{ };
 	}
 
 	namespace indicator {

@@ -36,7 +36,8 @@ import<array>;
 // std::numeric_limits
 #include<limits>
 
-[[nodiscard]] CRenderer::CRenderer(
+[[nodiscard]]
+CRenderer::CRenderer(
     _In_z_ const char* const cstrName
 ) noexcept
     : m_menu(CMenu{ cstrName })
@@ -46,9 +47,9 @@ import<array>;
     }
     
     if (
-        const HMODULE hOpenGL32 = GetModuleHandle(__TEXT("opengl32.dll"));
-        !hOpenGL32 ||
-        !(CRenderer::_p_wglSwapBuffers_gateway = reinterpret_cast<const CRenderer::_wglSwapBuffers_t>(GetProcAddress(hOpenGL32, "wglSwapBuffers")))
+        const module_t opengl32_dll = module_t{ GetModuleHandle(__TEXT("opengl32.dll")) };
+        !opengl32_dll.asHandle ||
+        !(CRenderer::_p_wglSwapBuffers_gateway = reinterpret_cast<const CRenderer::_wglSwapBuffers_t>(GetProcAddress(opengl32_dll.asHandle, "wglSwapBuffers")))
     )
     {
         return;
@@ -63,8 +64,37 @@ import<array>;
     this->m_bOk = CRenderer::_p_wglSwapBuffers_gateway;
 }
 
+CRenderer::CRenderer(
+    _Inout_ CRenderer&& _Right
+) noexcept
+    :
+    m_menu(std::move(_Right.m_menu)),
+    m_wglSwapBuffersTrampolineHook32(std::move(_Right.m_wglSwapBuffersTrampolineHook32)),
+    m_bOk(_Right.m_bOk)
+{
+    _Right.m_bOk = false;
+}
+
 CRenderer::~CRenderer( void ) noexcept {
 	this->m_wglSwapBuffersTrampolineHook32.detach();
+    this->m_bOk = false;
+}
+
+CRenderer& CRenderer::operator=(
+    CRenderer&& _Right
+) noexcept
+{
+    if (&_Right == this) {
+        return *this;
+    }
+
+    this->m_menu = std::move(_Right.m_menu);
+    this->m_wglSwapBuffersTrampolineHook32 = std::move(_Right.m_wglSwapBuffersTrampolineHook32);
+    this->m_bOk = _Right.m_bOk;
+
+    _Right.m_bOk = false;
+
+    return *this;
 }
 
 const bool& CRenderer::ok( void ) const noexcept {
@@ -163,7 +193,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
     const std::chrono::steady_clock::time_point currentTimePoint = std::chrono::steady_clock::now();
 
-    const CVector2 vec2MiddleScreen = CVector2{
+    globals::screen::vec2MiddleScreen = CVector2{
         static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_WIDTH]) / 2.f,
         static_cast<const float>(globals::screen::viewPort[VIEW_PORT_ELEMENT::VIEW_PORT_ELEMENT_HEIGHT]) / 2.f
     };
@@ -180,8 +210,8 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             const float fSinAngle = sinf(fAdjustedAngle);
 
             CVector2 vec2HitmarkerStartPosition = CVector2{
-                vec2MiddleScreen.x - fCosAngle * MIDDLE_PADDING,
-                vec2MiddleScreen.y + fSinAngle * MIDDLE_PADDING
+                globals::screen::vec2MiddleScreen.x - fCosAngle * MIDDLE_PADDING,
+                globals::screen::vec2MiddleScreen.y + fSinAngle * MIDDLE_PADDING
             };
 
             CVector2 vec2HitmarkerEndPosition = CVector2{
@@ -196,7 +226,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
                 HITMARKER_LINE_WIDTH
             );
 
-            vec2HitmarkerStartPosition.y = vec2MiddleScreen.y - fSinAngle * MIDDLE_PADDING;
+            vec2HitmarkerStartPosition.y = globals::screen::vec2MiddleScreen.y - fSinAngle * MIDDLE_PADDING;
             vec2HitmarkerEndPosition.y = vec2HitmarkerStartPosition.y - fSinAngle * LINE_LENGTH;
 
             gl::drawLineRGBA(
@@ -239,14 +269,12 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         );
     }
 
-    constexpr const float FLOAT_MAX_VALUE = std::numeric_limits<const float>::max();
-
-    float fPlayerDistanceToLocalPlayer = FLOAT_MAX_VALUE;
-    float fAimbotFOV = FLOAT_MAX_VALUE;
+    float fPlayerDistanceToLocalPlayer = std::numeric_limits<const float>::max();
+    float fAimbotFOV = std::numeric_limits<const float>::max();
     CVector3 vec3Delta = CVector3{ };
 
     for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
-        const playerent& refCurrentPlayer = *((**globals::entity::ppEntityList)[i]);
+        const playerent& refCurrentPlayer = *(**globals::entity::ppEntityList)[i];
 
         if (refCurrentPlayer.iHealth <= NULL) {
             continue;
@@ -310,6 +338,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
         if (
             !modules::combat::aimbot::bToggle ||
+            modules::combat::aimbot::bSilent ||
             globals::entity::pLocalPlayer->iHealth <= NULL ||
             globals::entity::pLocalPlayer->uPlayerState == PLAYER_STATE::PLAYER_STATE_GHOST
         )
@@ -322,8 +351,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
         if (
             refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID ||
-            traceResult.bCollided ||
-            fCurrentPlayerDistanceToLocalPlayer >= fPlayerDistanceToLocalPlayer
+            (modules::combat::aimbot::bVisible && traceResult.bCollided)
         )
         {
             continue;
@@ -336,7 +364,6 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
 
             fPlayerDistanceToLocalPlayer = fCurrentPlayerDistanceToLocalPlayer;
             vec3Delta = vec3CurrentPlayerDelta;
-            fAimbotFOV = 0.f;
 
             continue;
         }
@@ -346,7 +373,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
             continue;
         }
 
-        const float fCurrentPlayerAimbotFOV = vec2MiddleScreen.distance(vec2EnemyWorldPosition);
+        const float fCurrentPlayerAimbotFOV = globals::screen::vec2MiddleScreen.distance(vec2EnemyWorldPosition);
 
         if (fCurrentPlayerAimbotFOV > modules::combat::aimbot::fFOV || fCurrentPlayerAimbotFOV > fAimbotFOV) {
             continue;
@@ -356,13 +383,13 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         vec3Delta = vec3CurrentPlayerDelta;
     }
 
-    if (fAimbotFOV != FLOAT_MAX_VALUE) {
+    if (!vec3Delta.isZero()) {
         globals::entity::pLocalPlayer->vec2ViewAngles = (
             CVector2{
                 // opp. / adj.
                 atan2f(vec3Delta.y, vec3Delta.x) * CVector3::fDegreesRadiansConversionValue + 90.f,
                 // opp. / hyp.
-                asinf(vec3Delta.z / (FLOAT_MAX_VALUE == fPlayerDistanceToLocalPlayer ? vec3Delta.length() : fPlayerDistanceToLocalPlayer)) * CVector3::fDegreesRadiansConversionValue
+                asinf(vec3Delta.z / (std::numeric_limits<const float>::max() == fPlayerDistanceToLocalPlayer ? vec3Delta.length() : fPlayerDistanceToLocalPlayer)) * CVector3::fDegreesRadiansConversionValue
             }
         );
     }
@@ -371,7 +398,7 @@ BOOL WINAPI CRenderer::hk_wglSwapBuffers(
         constexpr const GLubyte ARR_RED[4u] = { 0xFF, 0x0, 0x0, 0xFF };
 
         gl::drawCircle(
-            vec2MiddleScreen,
+            globals::screen::vec2MiddleScreen,
             static_cast<const std::uint32_t>(modules::combat::aimbot::fFOV),
             40,
             ARR_RED,

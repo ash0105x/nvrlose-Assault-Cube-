@@ -8,11 +8,25 @@ import CWindow;
 
 export class CMenu final {
 public:
-	[[nodiscard]] explicit CMenu(
+	[[nodiscard]]
+	explicit CMenu(
 		_In_z_ const char* const cstrClientName
+	) noexcept;
+	CMenu(
+		const CMenu&
+	) = delete;
+	CMenu(
+		_Inout_ CMenu&&
 	) noexcept;
 public:
 	~CMenu( void ) noexcept;
+public:
+	CMenu& operator=(
+		const CMenu&
+	) = delete;
+	CMenu& operator=(
+		_Inout_ CMenu&&
+	) noexcept;
 public:
 	const bool& ok( void ) const noexcept;
 public:

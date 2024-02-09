@@ -88,12 +88,12 @@ export namespace utils {
 	}
 
 	namespace process {
-		typedef bool(* const& enumerateFunction_t)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept;
+		typedef bool(*enumerateFunction_t)(_In_ const PROCESSENTRY32& refProcessInfo32, _In_opt_ void* const vpExtraParameter) noexcept;
 
 		_Check_return_opt_
 		_Success_(return == true)
 		bool enumerate(
-			_In_ const utils::process::enumerateFunction_t& pRefEnumFunction,
+			_In_ const utils::process::enumerateFunction_t pEnumFunction,
 			_In_opt_ void* const vpExtraParameter
 		) noexcept;
 
@@ -106,10 +106,7 @@ export namespace utils {
 
 		[[nodiscard]]
 		_Check_return_
-		_Ret_maybenull_z_
-		_Ret_z_
-		_Success_(return != nullptr)
-		const TCHAR* name(
+		std::string name(
 			_In_ const DWORD dwId
 		) noexcept;
 	}

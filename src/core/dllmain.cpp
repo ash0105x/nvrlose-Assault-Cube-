@@ -3,8 +3,11 @@
     #error "This project can only be compiled for x86 architecture."
 #endif // !WIN32
 
+#define WIN32_LEAN_AND_MEAN
 // Windows header file
 #include<Windows.h>
+// std::format
+#include<format>
 
 // IHook class forward declaration
 class IHook;
@@ -30,8 +33,6 @@ import CTrampolineHook32;
 
 // std::array
 import<array>;
-// TCHAR type and functions
-import<tchar.h>;
 // assert
 import<cassert>;
 
@@ -39,13 +40,14 @@ import<cassert>;
 namespace globals {
     // pointer to CRenderer class
     static const CRenderer* pRenderer = nullptr;
+    static std::string strErrorMessage = std::string{ };
 }
 
 namespace exitFunction {
     // Function pointer type that suits the exit functions.
     typedef void(*type_t)(_In_ void* const, _In_z_ const char* const, _In_ const DWORD) noexcept;
 
-    // Display a message box and uninject the dll.
+    // Uninject the dll and display a message box.
     static __declspec(noreturn) void messageBox(
         _In_ void* const vpInstDLL,
         _In_z_ const char* const cstrMessage,
@@ -81,7 +83,7 @@ static DWORD WINAPI MainThread(
         // Uninject the dll, exit out of the function and
         // give the user the information that the heap
         // allocation failed.
-        (*pExit)(vpInstDLL, "Failed to allocate enough memory to hold the \"CRenderer\"-class!", ERROR_NOT_ENOUGH_MEMORY);
+        (*pExit)(vpInstDLL, "Failed to allocate enough memory to hold the \"CRenderer\"-class", ERROR_NOT_ENOUGH_MEMORY);
     }
 
     // if-statement that checks whether the CRenderer instance
@@ -90,7 +92,7 @@ static DWORD WINAPI MainThread(
         // Uninject the dll, exit out of the function and
         // give the user the information that we weren't able
         // to render graphics in assault cube.
-        (*pExit)(vpInstDLL, "Failed to make in-game-rendering possible!", ERROR_FUNCTION_FAILED);
+        (*pExit)(vpInstDLL, "Failed to make in-game-rendering possible", ERROR_FUNCTION_FAILED);
     }
 
     // Try to find the the signature that can be found in
@@ -295,60 +297,37 @@ BOOL APIENTRY DllMain(
     _In_ [[maybe_unused]] const void* const lpvReserved
 ) noexcept
 {
-    constexpr const std::uint8_t MAX_ERROR_MESSAGE_LENGTH = 200;
-    static TCHAR tcstrErrorMessage[MAX_ERROR_MESSAGE_LENGTH] = { __TEXT('\0') };
-
-    switch (fdwReason) {
-    case DLL_PROCESS_ATTACH:
-    {
-        typedef std::remove_all_extents<decltype(tcstrErrorMessage)>::type errorType_t;
-
-        const auto exit = [&hInstDLL](_In_z_ const errorType_t* const tcstrError) noexcept -> __declspec(noreturn) void{
-            assert(
-                tcstrError &&
-                tcstrError[NULL] != __TEXT('\0') &&
-                _tcslen(tcstrError) < MAX_ERROR_MESSAGE_LENGTH
-            );
+    if (DLL_PROCESS_ATTACH == fdwReason) {
+        const auto exit = [&hInstDLL](_In_z_ const char* const cstrError) noexcept -> __declspec(noreturn) void{
+            assert(cstrError && cstrError[NULL] != '\0');
 
             const DWORD dwLastError = GetLastError();
 
-            constexpr const errorType_t* const ERROR_MESSAGE_FORMAT = (
-                std::_Is_character<errorType_t>::value ?
-                __TEXT("%s! Error code: %d (0x%lx)") :
-                __TEXT("%ls! Error code: %d (0x%lx)")
-            );
-
-            _stprintf_s(
-                tcstrErrorMessage,
-                MAX_ERROR_MESSAGE_LENGTH,
-                ERROR_MESSAGE_FORMAT,
-                tcstrError,
-                dwLastError,
-                dwLastError
-            );
+            globals::strErrorMessage = std::format("{}! Error code: {} (0x{:X})", cstrError, dwLastError, dwLastError);
 
             FreeLibrary(hInstDLL);
         };
 
         DisableThreadLibraryCalls(hInstDLL);
 
-        if (!globals::modules::ac_client_exe.asBytePtr) {
+        if (!globals::modules::ac_client_exe.asHandle) {
             SetLastError(ERROR_MOD_NOT_FOUND);
 
-            typedef std::basic_string<TCHAR> tstring;
-
-            const tstring tstrErrorMessage = (
-                tstring{ __TEXT("Failed to retrieve module \"ac_client.exe\" because you injected me into \"") } +
-                tstring{ utils::process::name(GetCurrentProcessId()) } +
-                tstring{ __TEXT("\" instead of Assault Cube (ac_client.exe) which is") } +
+#pragma warning ( push )
+#pragma warning ( disable : 6387 ) // 'name(GetCurrentProcessId())' could be '0':  this does not adhere to the specification for the function 'std::basic_string<wchar_t,std::char_traits<wchar_t>,std::allocator<wchar_t> >::{ctor}'.
+            const std::string strClientErrorMessage = (
+#pragma warning ( pop )
+                std::string{ "Failed to retrieve module \"ac_client.exe\" because you injected me into \"" } +
+                utils::process::name(GetCurrentProcessId()) +
+                std::string{ "\" instead of AssaultCube (ac_client.exe) which is" } +
                 (
-                    utils::process::isRunning(__TEXT("ac_client.exe")) ?
-                    tstring{ __TEXT(" currently running") } :
-                    tstring{ __TEXT("n't even currently running") }
+                    utils::process::isRunning(TEXT("ac_client.exe")) ?
+                    std::string{ " currently running" } :
+                    std::string{ "n't even currently running" }
                 )
             );
 
-            exit(tstrErrorMessage.c_str());
+            exit(strClientErrorMessage.c_str());
         }
 
         const HANDLE hThread = CreateThread(
@@ -361,7 +340,7 @@ BOOL APIENTRY DllMain(
         );
 
         if (!hThread) {
-            exit(__TEXT("Failed to create a seperate thread to fully instantiate the cheat"));
+            exit("Failed to create a seperate thread to fully instantiate the cheat");
         }
 
         SetThreadDescription(hThread, L"nvrlose client main");
@@ -375,18 +354,17 @@ BOOL APIENTRY DllMain(
 
             CloseHandle(hThread);
             SetLastError(ERROR_CONTINUE);
-            exit(__TEXT("Failed to resume the main thread"));
+            exit("Failed to resume the main thread");
         } while (dwSuspendCount > 1);
 
         CloseHandle(hThread);
     }
-        break;
-    case DLL_PROCESS_DETACH:
-        if (tcstrErrorMessage[NULL] != __TEXT('\0')) {
-            MessageBox(
+    else if (DLL_PROCESS_DETACH == fdwReason) {
+        if (!globals::strErrorMessage.empty()) {
+            MessageBoxA(
                 nullptr,
-                tcstrErrorMessage,
-                __TEXT("Error!"),
+                globals::strErrorMessage.c_str(),
+                "Error!",
                 (MB_OK | MB_ICONERROR)
             );
 
@@ -397,31 +375,25 @@ BOOL APIENTRY DllMain(
             (*globals::function::pPopupMessage)("Exitting...");
         }
 
-        {
-            constexpr const std::uint8_t HOOK_COUNT = 3;
+        constexpr const std::uint8_t HOOK_COUNT = 3;
 
-            const std::array<const IHook* const* const, HOOK_COUNT> arrSuccessed = std::array<const IHook* const* const, HOOK_COUNT>{
-                &std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode),
-                &std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction),
-                &std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode)
-            };
+        const std::array<const IHook* const* const, HOOK_COUNT> arrSuccessed = std::array<const IHook* const* const, HOOK_COUNT>{
+            &std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::healthDecreaseOpcode),
+            &std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::shootFunction),
+            &std::get<HOOK_INDEX::HOOK_INDEX_METHOD>(hooks::unknownOpcode)
+        };
 
-            for (const IHook* const* const& ppRefHook : arrSuccessed) {
-                const IHook* const& pRefHook = *ppRefHook;
+        for (const IHook* const* const& ppRefHook : arrSuccessed) {
+            const IHook* const& pRefHook = *ppRefHook;
 
-                if (pRefHook) {
-                    delete pRefHook;
-                }
+            if (pRefHook) {
+                delete pRefHook;
             }
         }
 
         if (globals::pRenderer) {
             delete globals::pRenderer;
         }
-    
-        break;
-    default:
-        break;
     }
 
     return TRUE;
@@ -430,7 +402,7 @@ BOOL APIENTRY DllMain(
 //
 //  FUNCTION: exitFunction::messageBox(_In_ void* const, _In_z_ const char* const, _In_ const DWORD)
 //
-//  PURPOSE:  Display a message box and uninject the dll.
+//  PURPOSE:  Uninject the dll and display a message box..
 //
 //  PARAMETERS:
 //    vpInstDLL   - instance to the current DLL
@@ -450,13 +422,7 @@ static __declspec(noreturn) void exitFunction::messageBox(
     // crashes
     assert(cstrMessage);
 
-    // Display a messagebox with the error message
-    MessageBoxA(
-        nullptr,
-        cstrMessage,
-        "Error",
-        (MB_ICONERROR | MB_OK)
-    );
+    globals::strErrorMessage = std::format("{}! Error code: {} (0x{:X})", cstrMessage, dwExitCode, dwExitCode);
 
     // Pass the exit code and uninject the dll
     FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);
@@ -487,7 +453,7 @@ static __declspec(noreturn) void exitFunction::popupMessage(
 
     // Call assault cube's popup message function to display the
     // error message
-    (*globals::function::pPopupMessage)(cstrMessage);
+    (*globals::function::pPopupMessage)("%s! Error code: %d (0x%lX)", cstrMessage, dwExitCode, dwExitCode);
 
     // Pass the exit code and uninject the dll
     FreeLibraryAndExitThread(static_cast<const HMODULE>(vpInstDLL), dwExitCode);

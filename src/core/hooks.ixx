@@ -7,6 +7,9 @@ import<string>;
 import globals;
 import weapon;
 import playerent;
+import CTraceRay;
+import aimbot;
+import utils;
 
 export class IHook;
 
@@ -96,7 +99,9 @@ namespace functions {
             mov dword ptr[This], esi
         }
 
-        if (globals::entity::pLocalPlayer->uTeamID != This->pOwner->uTeamID) {
+        const playerent* const pWeaponOwner = This->pOwner;
+
+        if (globals::entity::pLocalPlayer->uTeamID != pWeaponOwner->uTeamID) {
             *This->upAmmo = NULL;
             *This->upReservedAmmo = NULL;
 
@@ -107,6 +112,69 @@ namespace functions {
 
         *This->upAmmo = uRefInitialAmmo + 1;
         *This->upReservedAmmo = uRefInitialAmmo * 2;
+
+        if (pWeaponOwner != globals::entity::pLocalPlayer || !modules::combat::aimbot::bSilent) {
+            return;
+        }
+
+        const CVector3* pvec3ClosestEnemyPosition = nullptr;
+        float fClosestEnemyDistance = std::numeric_limits<float>::max();
+        float fAimbotFOV = std::numeric_limits<float>::max();
+
+        for (std::uint8_t i = globals::entity::FIRST_ENTITY_INDEX; i < *globals::match::bypPlayerInGame; ++i) {
+            const playerent& refCurrentPlayer = *(**globals::entity::ppEntityList)[i];
+
+            if (refCurrentPlayer.iHealth <= NULL || refCurrentPlayer.uTeamID == globals::entity::pLocalPlayer->uTeamID) {
+                continue;
+            }
+
+            CTraceRay traceResult = CTraceRay{ };
+
+            traceResult.traceLine(
+                globals::entity::pLocalPlayer->vec3EyePosition,
+                refCurrentPlayer.vec3EyePosition,
+                globals::entity::pLocalPlayer,
+                false,
+                false
+            );
+
+            if (modules::combat::aimbot::bVisible && traceResult.bCollided) {
+                continue;
+            }
+
+            const CVector3* const pvec3CurrentPlayerEyePosition = &refCurrentPlayer.vec3EyePosition;
+
+            const float fCurrentDistance = globals::entity::pLocalPlayer->vec3EyePosition.distance(*pvec3CurrentPlayerEyePosition);
+
+            if (modules::combat::aimbot::bIgnoreFOV) {
+                if (fCurrentDistance >= fClosestEnemyDistance) {
+                    continue;
+                }
+
+                fClosestEnemyDistance = fCurrentDistance;
+                pvec3ClosestEnemyPosition = pvec3CurrentPlayerEyePosition;
+
+                continue;
+            }
+
+            CVector2 vec2EnemyWorldPosition = CVector2{ };
+            if (!utils::math::worldToScreen(refCurrentPlayer.vec3EyePosition, vec2EnemyWorldPosition)) {
+                continue;
+            }
+
+            const float fCurrentPlayerAimbotFOV = globals::screen::vec2MiddleScreen.distance(vec2EnemyWorldPosition);
+
+            if (fCurrentPlayerAimbotFOV > modules::combat::aimbot::fFOV || fCurrentPlayerAimbotFOV > fAimbotFOV) {
+                continue;
+            }
+
+            fAimbotFOV = fCurrentPlayerAimbotFOV;
+            pvec3ClosestEnemyPosition = pvec3CurrentPlayerEyePosition;
+        }
+
+        if (pvec3ClosestEnemyPosition) {
+            *globals::screen::pVec3CurrentWeaponEndTrajectory = *pvec3ClosestEnemyPosition;
+        }
     }
 
     static void __cdecl resetLastHitTimer( void ) noexcept {
@@ -143,25 +211,31 @@ namespace functions {
             push ebp
             mov ebp, esp
 
-            mov ecx, dword ptr[ebp + 0xC]
-            cmp dword ptr[globals::entity::pLocalPlayer], ecx
+            mov ecx, dword ptr[ebp + 0xC] // pAttacker
+            cmp dword ptr[globals::entity::pLocalPlayer], ecx // if globals::entity::pLocalPlayer == pAttacker
             je onLocalPlayer
             jmp dword ptr[jumpBackAddress::vpUnknownOpcode]
             onLocalPlayer:
-            mov ecx, dword ptr[eax + 0xF8]
-            sub ecx, dword ptr[ebp + 0x8]
+            // eax is the defender (playerent*)
+            mov ecx, dword ptr[eax + 0xF8] // defender->iHealth
+            sub ecx, dword ptr[ebp + 0x8] // iDamage
 
+            // we will call a function that
+            // could change the value in our
+            // eax register. This should not
+            // happen so we preserve it
             push eax
 
-            push ecx
-            push dword ptr[ebp + 0x8]
-            lea ecx, dword ptr[eax + 0x225]
+            push ecx // iHealthRemaining
+            push dword ptr[ebp + 0x8] // iDamage
+            lea ecx, dword ptr[eax + 0x225] // defender->cstrNickname
             push ecx
             call setValues
-            add esp, 0xC
+            add esp, 0xC // stack clean-up
 
             call resetLastHitTimer
 
+            // restore original eax value
             pop eax
             jmp dword ptr[jumpBackAddress::vpUnknownOpcode]
         }
